@@ -1,0 +1,31 @@
+{
+  "name": "mobico-server",
+  "version": "1.0.0",
+  "description": "A VOIP Calling based Server using Twillio",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch:ts": "tsc -w",
+    "watch:node": "nodemon dist/main.js"
+  },
+  "author": "Apoorv Kansal <apoorvkansalak@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "@types/bcrypt": "^3.0.1",
+    "@types/express": "^4.17.11",
+    "bcrypt": "^5.0.1",
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^5.12.3",
+    "socket.io": "^4.0.1",
+    "ts-node": "^9.1.1",
+    "twilio": "^3.60.0",
+    "typescript": "^4.2.4"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^8.5.1",
+    "@types/qs": "6.9.4"
+  }
+}
