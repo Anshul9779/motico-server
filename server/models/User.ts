@@ -25,6 +25,11 @@ const UserSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Company",
     },
+    isOnline: {
+      type: Boolean,
+      default: false,
+      required: true,
+    },
     roles: [
       {
         type: String,
@@ -43,6 +48,7 @@ export interface UserBase extends Document, Record<string, unknown> {
   createdAt: Date;
   updatedAt: Date;
   company?: Types.ObjectId | Record<string, unknown>;
+  isOnline: boolean;
 }
 
 export interface UserDocument extends UserBase {
@@ -59,6 +65,8 @@ export interface TokenUser {
   email: UserBase["email"];
   issuedAt: number;
   id: UserBase["_id"];
+  roles: UserBase["roles"];
+  companyId: string;
   validTime?: number;
 }
 
