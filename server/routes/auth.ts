@@ -1,5 +1,6 @@
 import {
   DUPLICATE_EMAIL,
+  FORBIDDEN,
   INCOMPLETE_DATA,
   INTERNAL_SERVER_ERROR,
   TOKEN_ERROR,
@@ -7,8 +8,13 @@ import {
   USER_NOT_FOUND,
 } from "./../errors";
 import { Request, Response, NextFunction } from "express";
-import UserModel, { generateHashedPassword, TokenUser } from "./../models/User";
+import UserModel, {
+  comparePassword,
+  generateHashedPassword,
+  TokenUser,
+} from "./../models/User";
 import jwt from "jsonwebtoken";
+import { ROLES } from "./../constants";
 
 const SECRET_TOKEN = "randomstring_KLNL kn lk091830 knl";
 
@@ -32,6 +38,28 @@ export const authenticateToken = (
     }
     req.user = user;
     next();
+  });
+};
+
+export const isAdmin = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (token == null) return res.status(401).json(UNAUTHORIZED);
+  jwt.verify(token, SECRET_TOKEN, (err, user: TokenUser) => {
+    if (err) {
+      console.error(err);
+      res.status(401).json(TOKEN_ERROR);
+    } else if (user.roles.includes(ROLES.ADMIN)) {
+      req.user = user;
+      next();
+    } else {
+      res.status(403).json(FORBIDDEN);
+    }
   });
 };
 
@@ -67,6 +95,7 @@ export const signupAPI = async (req: Request, res: Response) => {
       email: payload.email,
       password: hashedPassword,
       roles: ["ROLE_USER"],
+      isOnline: false,
     });
     // 201 Created
     createdUser.password = undefined;
@@ -102,11 +131,18 @@ export const loginAPI = async (req: Request, res: Response) => {
     if (user === null) {
       return res.status(404).json(USER_NOT_FOUND);
     }
-    user.password = undefined;
+    if (!(await comparePassword(payload.password, user.password))) {
+      return res.status(400).json({
+        err: "INCORRECT_PASSWORD",
+        message: "Your password or email are incorrect.",
+      });
+    }
     const userDetails = {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      roles: user.roles,
+      companyId: user.company,
       issuedAt: new Date().getTime(),
       id: user._id,
     };
