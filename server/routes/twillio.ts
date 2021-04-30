@@ -2,9 +2,15 @@ import { Response, Request, NextFunction } from "express";
 import { AuthenticatedRequest } from "./auth";
 import config from "./../config";
 import twilio from "twilio";
-import { INCOMPLETE_DATA, INTERNAL_SERVER_ERROR } from "./../errors";
+import {
+  DATA_INCORRECT,
+  INCOMPLETE_DATA,
+  INTERNAL_SERVER_ERROR,
+} from "./../errors";
 import VoiceResponse from "twilio/lib/twiml/VoiceResponse";
 import CallRecordModel from "./../models/CallRecord";
+
+const ADMIN_NUMBER = "+18582424792";
 
 /**
  * How to start a phone call?
@@ -50,14 +56,45 @@ export const twillioToken = (req: AuthenticatedRequest, res: Response) => {
  * [`POST`]
  *
  */
-export const twillioConnect = (req: Request, res: Response) => {
+export const twillioConnect = async (req: Request, res: Response) => {
   const phoneNumber = req.body.to;
   const callerId = req.body.from;
+  const callRecordID = req.body.callRecordID;
+  const isAdmin = req.body.isAdmin;
+  // Here check if the ID is correct or not
+  const callRecord = await CallRecordModel.findOne({
+    _id: callRecordID,
+  }).exec();
+  if (!callRecord) {
+    res.send(400).json(DATA_INCORRECT);
+  }
+
+  // If ID is correct then mutate the data
+  await CallRecordModel.findOneAndUpdate(
+    { _id: callRecordID },
+    { startTime: new Date().getTime() }
+  );
+
+  // Refer https://stackoverflow.com/a/41063359/8077711
+
+  // By default all the call are conf calls.
+  // Conference Room name is the same as callRecordID
+  // Admin will join the conf while agent and user would be talking
+
   const twiml = new VoiceResponse();
 
-  const dial = twiml.dial({ callerId });
-  dial.number({}, phoneNumber);
-  res.send(twiml.toString());
+  if (isAdmin === "false") {
+    // Agent and User
+    const dial = twiml.dial({ callerId });
+    dial.conference(`${callRecordID}`);
+    dial.number({}, phoneNumber);
+    res.send(twiml.toString());
+  } else {
+    // Moderator barges in
+    const dial = twiml.dial({ callerId: ADMIN_NUMBER });
+    dial.conference(`${callRecordID}`);
+    res.send(twiml.toString());
+  }
 };
 
 export const twillioCallStart = async (
@@ -73,7 +110,10 @@ export const twillioCallStart = async (
       from: payload.from,
       to: payload.to,
       user: req.user.id,
-      type: "INCOMING",
+      type: "OUTGOING",
+      isActive: true,
+      company: req.user.companyId,
+      callSid: "",
     };
     // Start a Call Record and Return the ID;
     const callRecord = await CallRecordModel.create(callRecordDetails);
