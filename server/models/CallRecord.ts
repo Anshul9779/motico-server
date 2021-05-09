@@ -13,7 +13,6 @@ const CallRecordSchema = new Schema({
   },
   callSid: {
     type: String,
-    required: true,
     default: "",
   },
   user: {

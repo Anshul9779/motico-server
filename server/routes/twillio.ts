@@ -11,6 +11,7 @@ import VoiceResponse from "twilio/lib/twiml/VoiceResponse";
 import CallRecordModel from "./../models/CallRecord";
 
 const ADMIN_NUMBER = "+18582424792";
+const NGROK_URL = "http://58214685f13c.ngrok.io";
 
 /**
  * How to start a phone call?
@@ -50,6 +51,29 @@ export const twillioToken = (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
+export const twillioConfTwiML = async (req: Request, res: Response) => {
+  const callRecordID = req.params.sid;
+  console.log("Conf HIT", req.params, req.body);
+  const seqNum = req.body.SequenceNumber;
+  if (seqNum === "1") {
+    await client
+      .conferences("conf_" + callRecordID)
+      .participants.create({
+        to: req.params.phone,
+        from: req.params.callerId,
+        earlyMedia: true,
+        endConferenceOnExit: true,
+      })
+      .then((participant) => {
+        res.status(200).end();
+      })
+      .catch((error) => {
+        console.error(error);
+        res.status(500).end();
+      });
+  }
+};
+
 /**
  * Twillio Call Connect
  *
@@ -57,6 +81,7 @@ export const twillioToken = (req: AuthenticatedRequest, res: Response) => {
  *
  */
 export const twillioConnect = async (req: Request, res: Response) => {
+  console.log(req.body);
   const phoneNumber = req.body.to;
   const callerId = req.body.from;
   const callRecordID = req.body.callRecordID;
@@ -68,12 +93,13 @@ export const twillioConnect = async (req: Request, res: Response) => {
   if (!callRecord) {
     res.send(400).json(DATA_INCORRECT);
   }
-
-  // If ID is correct then mutate the data
-  await CallRecordModel.findOneAndUpdate(
-    { _id: callRecordID },
-    { startTime: new Date().getTime() }
-  );
+  if (isAdmin === "false") {
+    // If ID is correct then mutate the data
+    await CallRecordModel.findOneAndUpdate(
+      { _id: callRecordID },
+      { startTime: new Date().getTime() }
+    );
+  }
 
   // Refer https://stackoverflow.com/a/41063359/8077711
 
@@ -85,14 +111,40 @@ export const twillioConnect = async (req: Request, res: Response) => {
 
   if (isAdmin === "false") {
     // Agent and User
+    let name = "conf_" + callRecordID;
+
+    const twiml = new twilio.twiml.VoiceResponse();
+    // Get the calledID from configuration.json
     const dial = twiml.dial({ callerId });
-    dial.conference(`${callRecordID}`);
-    dial.number({}, phoneNumber);
+
+    dial.conference(
+      {
+        endConferenceOnExit: true,
+        statusCallbackEvent: ["join"],
+        statusCallback: `/api/twillio/call/${callRecordID}/add-participant/${encodeURIComponent(
+          callerId
+        )}/${encodeURIComponent(phoneNumber)}`,
+      },
+      name
+    );
+    res.set({
+      "Content-Type": "application/xml",
+      "Cache-Control": "public, max-age=0",
+    });
     res.send(twiml.toString());
   } else {
+    // Convert Existing call to conf call.
+    console.log("Call SID", callRecord.callSid);
+    // await client.calls(callRecord.callSid).update({
+    //   url: `${NGROK_URL}/api/twillio/confTwiML?callId=${callRecordID}`,
+    //   method: "GET",
+    // });
+    // console.log("Updated");
     // Moderator barges in
-    const dial = twiml.dial({ callerId: ADMIN_NUMBER });
-    dial.conference(`${callRecordID}`);
+    const dial = twiml.dial();
+    console.log("Admin joingin conf", callRecordID);
+    dial.conference({ muted: true, beep: "false" }, `conf_${callRecordID}`);
+    res.type("text/xml");
     res.send(twiml.toString());
   }
 };

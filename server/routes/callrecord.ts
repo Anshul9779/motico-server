@@ -1,5 +1,9 @@
 // Basic APIs for Call Record
-import { DATA_INCORRECT, INTERNAL_SERVER_ERROR } from "./../errors";
+import {
+  DATA_INCORRECT,
+  INCOMPLETE_DATA,
+  INTERNAL_SERVER_ERROR,
+} from "./../errors";
 import { Response } from "express";
 import CallRecordModel from "./../models/CallRecord";
 import { AuthenticatedRequest } from "./auth";
@@ -148,6 +152,32 @@ export const callRecordTime = async (
       missed,
     };
     res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json(INTERNAL_SERVER_ERROR);
+  }
+};
+
+/**
+ * POST REQUEST PROTECTED
+ */
+export const getCallRecordCSID = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const callId = req.body.callId;
+    if (!callId) {
+      res.status(400).json(INCOMPLETE_DATA);
+    }
+
+    const callRecord = await CallRecordModel.findById(callId).exec();
+    if (!callRecord) {
+      res.status(404).json(DATA_INCORRECT);
+    }
+    res.status(200).json({
+      csid: callRecord.callSid,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json(INTERNAL_SERVER_ERROR);

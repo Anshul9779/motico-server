@@ -14,6 +14,7 @@ import {
 } from "./routes/auth";
 import {
   twillioCallStart,
+  twillioConfTwiML,
   twillioConnect,
   twillioToken,
 } from "./routes/twillio";
@@ -21,7 +22,11 @@ import UserModel from "./models/User";
 import { ROLES } from "./constants";
 import { onlineUsers, userAddCompany, userAddRoles } from "./routes/users";
 import CallRecordModel, { CallRecordPopulated } from "./models/CallRecord";
-import { callRecordTime, totalCalls } from "./routes/callrecord";
+import {
+  callRecordTime,
+  getCallRecordCSID,
+  totalCalls,
+} from "./routes/callrecord";
 
 //Set up default mongoose connection
 const mongoDB = "mongodb://127.0.0.1:27017/twillio";
@@ -57,6 +62,7 @@ const SOCKET = {
   USER_CALL_END: "USER_CALL_END",
   CALL_ADD: "CALL_ADD",
   CALL_END: "CALL_END",
+  CALL_ADD_CSID: "CALL_ADD_CSID",
 } as const;
 
 io.on("connection", (socket) => {
@@ -141,6 +147,20 @@ io.on("connection", (socket) => {
       id: data.callID,
     });
   });
+
+  socket.on(
+    SOCKET.CALL_ADD_CSID,
+    async (data: { callId: string; csid: string }) => {
+      await CallRecordModel.findOneAndUpdate(
+        {
+          _id: data.callId,
+        },
+        {
+          callSid: data.csid,
+        }
+      ).exec();
+    }
+  );
 });
 
 app.use(express.static("public"));
@@ -177,6 +197,12 @@ app.post("/api/admin/user/roles", isAdmin, userAddRoles);
 
 app.get("/api/twillio/token", authenticateToken, twillioToken);
 
+// Expects a Query Param as callId
+app.post(
+  "/api/twillio/call/:sid/add-participant/:callerId/:phone",
+  twillioConfTwiML
+);
+
 app.post(
   "/api/twillio/connect",
   twilio.webhook({ validate: false }),
@@ -191,6 +217,7 @@ app.post("/api/twillio/outgoing/start", authenticateToken, twillioCallStart);
 
 app.get("/api/call/analytics", authenticateToken, totalCalls);
 app.post("/api/call/time", authenticateToken, callRecordTime);
+app.post("/api/call/getcsid", authenticateToken, getCallRecordCSID);
 
 app.get("/", authenticateToken, (req: AuthenticatedRequest, res) => {
   res.send("Protected");
