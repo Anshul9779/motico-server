@@ -12,6 +12,7 @@ const ObjectId = Types.ObjectId;
 
 import UserModel from "./../models/User";
 import { AuthenticatedRequest } from "./auth";
+import Company from "./../models/Company";
 
 /**
  * Online Users Details
@@ -106,6 +107,31 @@ export const userAddRoles = async (
         message: "User Updated",
       });
     }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json(INTERNAL_SERVER_ERROR);
+  }
+};
+
+export const createCompnay = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    if (!req.body.name || !req.body.email) {
+      return res.status(400).json(INCOMPLETE_DATA);
+    }
+    const { name, email } = req.body;
+    const company = await Company.create({
+      name,
+      email,
+    });
+
+    res.status(201).json({
+      id: company._id,
+      name: company.name,
+      email: company.email,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json(INTERNAL_SERVER_ERROR);

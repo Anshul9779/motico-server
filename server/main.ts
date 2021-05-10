@@ -20,7 +20,12 @@ import {
 } from "./routes/twillio";
 import UserModel from "./models/User";
 import { ROLES } from "./constants";
-import { onlineUsers, userAddCompany, userAddRoles } from "./routes/users";
+import {
+  createCompnay,
+  onlineUsers,
+  userAddCompany,
+  userAddRoles,
+} from "./routes/users";
 import CallRecordModel, { CallRecordPopulated } from "./models/CallRecord";
 import {
   callRecordTime,
@@ -187,6 +192,7 @@ app.post("/api/login", loginAPI);
 app.get("/api/admin/user/online", isAdmin, onlineUsers);
 app.post("/api/admin/user/company", isAdmin, userAddCompany);
 app.post("/api/admin/user/roles", isAdmin, userAddRoles);
+app.post("/api/admin/company/new", isAdmin, createCompnay);
 
 /**
  *  TWILLIO BASED APIS

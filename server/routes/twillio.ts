@@ -64,10 +64,10 @@ export const twillioConfTwiML = async (req: Request, res: Response) => {
         earlyMedia: true,
         endConferenceOnExit: true,
       })
-      .then((participant) => {
+      .then(() => {
         res.status(200).end();
       })
-      .catch((error) => {
+      .catch((error: Error) => {
         console.error(error);
         res.status(500).end();
       });
