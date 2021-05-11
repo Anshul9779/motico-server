@@ -12,6 +12,7 @@ import {
   loginAPI,
   signupAPI,
 } from "./routes/auth";
+import path from "path";
 import {
   twillioCallStart,
   twillioConfTwiML,
@@ -225,8 +226,8 @@ app.get("/api/call/analytics", authenticateToken, totalCalls);
 app.post("/api/call/time", authenticateToken, callRecordTime);
 app.post("/api/call/getcsid", authenticateToken, getCallRecordCSID);
 
-app.get("/", authenticateToken, (req: AuthenticatedRequest, res) => {
-  res.send("Protected");
+app.get("/*", function (req, res) {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
 server.listen(8080, () => {

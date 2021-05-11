@@ -126,7 +126,6 @@ export const createCompnay = async (
       name,
       email,
     });
-
     res.status(201).json({
       id: company._id,
       name: company.name,
