@@ -123,6 +123,7 @@ export const signupAPI = async (req: Request, res: Response) => {
  */
 export const loginAPI = async (req: Request, res: Response) => {
   const payload = req.body;
+  console.log("called");
   if (!payload.email || !payload.password) {
     return res.status(400).json(INCOMPLETE_DATA);
   }

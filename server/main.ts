@@ -33,6 +33,7 @@ import {
   getCallRecordCSID,
   totalCalls,
 } from "./routes/callrecord";
+import { getRegisteredPhoneNumbers, addNumber } from "./routes/phonenumber";
 
 //Set up default mongoose connection
 const mongoDB = "mongodb://127.0.0.1:27017/twillio";
@@ -204,6 +205,12 @@ app.post("/api/admin/company/new", isAdmin, createCompnay);
 
 app.get("/api/twillio/token", authenticateToken, twillioToken);
 
+app.get("/api/status", (req, res) => {
+  res.status(200).json({
+    message: "Hi, from server",
+  });
+});
+
 // Expects a Query Param as callId
 app.post(
   "/api/twillio/call/:sid/add-participant/:callerId/:phone",
@@ -225,6 +232,13 @@ app.post("/api/twillio/outgoing/start", authenticateToken, twillioCallStart);
 app.get("/api/call/analytics", authenticateToken, totalCalls);
 app.post("/api/call/time", authenticateToken, callRecordTime);
 app.post("/api/call/getcsid", authenticateToken, getCallRecordCSID);
+
+/**
+ * Phone number utility
+ */
+
+app.get("/api/phonenumber/registered", isAdmin, getRegisteredPhoneNumbers);
+app.post("/api/phonenumber/new", isAdmin, addNumber);
 
 app.get("/*", function (req, res) {
   res.sendFile(path.join(__dirname, "build", "index.html"));
