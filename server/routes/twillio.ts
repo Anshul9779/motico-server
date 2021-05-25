@@ -143,7 +143,7 @@ export const twillioConnect = async (req: Request, res: Response) => {
     // Moderator barges in
     const dial = twiml.dial();
     console.log("Admin joingin conf", callRecordID);
-    dial.conference({ muted: true, beep: "false" }, `conf_${callRecordID}`);
+    dial.conference({ beep: "false" }, `conf_${callRecordID}`);
     res.type("text/xml");
     res.send(twiml.toString());
   }
