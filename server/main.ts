@@ -14,6 +14,8 @@ import {
 } from "./routes/auth";
 import path from "path";
 import {
+  buyNumber,
+  getAvailablePhoneNumbers,
   twillioCallStart,
   twillioConfTwiML,
   twillioConnect,
@@ -224,6 +226,14 @@ app.post(
 );
 
 app.post("/api/twillio/outgoing/start", authenticateToken, twillioCallStart);
+
+app.post(
+  "/api/twillio/phonenumber/search",
+  authenticateToken,
+  getAvailablePhoneNumbers
+);
+
+app.post("/api/twillio/phonenumber/buy", isAdmin, buyNumber);
 
 /**
  * Meta utility apis
