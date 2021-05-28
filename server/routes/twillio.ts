@@ -240,7 +240,7 @@ export const buyNumber = async (req: AuthenticatedRequest, res: Response) => {
       cost: 1,
       company: companyId,
       purchasedOn: new Date().getTime(),
-      twilioId: incomingPhoneNumber.sid,
+      twillioId: incomingPhoneNumber.sid,
       assignedTo: [],
       number: phoneNumber,
       country,
