@@ -16,6 +16,8 @@ import path from "path";
 import {
   buyNumber,
   getAvailablePhoneNumbers,
+  ivrMenu,
+  ivrWelcome,
   twillioCallStart,
   twillioConfTwiML,
   twillioConnect,
@@ -234,6 +236,8 @@ app.post(
 );
 
 app.post("/api/twillio/phonenumber/buy", isAdmin, buyNumber);
+app.post("/api/twillio/ivr/welcome", ivrWelcome);
+app.post("/api/twillio/ivr/menu", ivrMenu);
 
 /**
  * Meta utility apis

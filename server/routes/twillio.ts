@@ -258,3 +258,47 @@ export const buyNumber = async (req: AuthenticatedRequest, res: Response) => {
     res.status(500).json(INTERNAL_SERVER_ERROR);
   }
 };
+
+export const ivrWelcome = async (req: Request, res: Response) => {
+  console.log(req.body);
+  const voiceReponse = new VoiceResponse();
+
+  const gather = voiceReponse.gather({
+    action: "/ivr/menu",
+    numDigits: 1,
+    method: "POST",
+  });
+
+  gather.say(
+    "Thanks for calling Motico Solutions. This is test for IVR Services. Press 1 for calling our sales guy. Press 2 for cutting this call after a different message"
+  );
+  return res.send(voiceReponse.toString());
+};
+
+const terminateCall = () => {
+  const twiml = new VoiceResponse();
+  twiml.say("Thank you for calling. We are hanging up now!");
+  twiml.hangup();
+  return twiml.toString();
+};
+
+export const ivrMenu = async (req: Request, res: Response) => {
+  console.log(req.body);
+  const digit = req.body.digits || req.body.Digits;
+  if (digit === "1") {
+    const twiml = new VoiceResponse();
+    twiml.dial("+18564153631");
+    return res.send(twiml.toString());
+  } else if (digit === "2") {
+    const twiml = new VoiceResponse();
+    twiml.dial(
+      "Motico Solutions provides Voice Over Internet Protocol Services."
+    );
+    twiml.say(
+      "Thank you for calling Motico Solutioncs. We are now hanging up!"
+    );
+    return res.send(twiml.toString());
+  } else res.send(terminateCall());
+};
+
+// How to
