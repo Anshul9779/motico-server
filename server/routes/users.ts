@@ -246,8 +246,12 @@ export const getUserDetails = async (
   const userId = req.body.userId;
   const user = await UserModel.findById(userId).exec();
   return res.json({
-    ...user,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    phoneNumbers: user.phoneNumbers,
+    roles: user.roles,
+    company: user.comany,
     id: user._id,
-    _id: undefined,
   });
 };
