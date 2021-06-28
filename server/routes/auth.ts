@@ -12,9 +12,12 @@ import UserModel, {
   comparePassword,
   generateHashedPassword,
   TokenUser,
+  UserDocument,
 } from "./../models/User";
 import jwt from "jsonwebtoken";
-import { ROLES } from "./../constants";
+import { NEW_USER_PASSWORD, ROLES } from "./../constants";
+import PhoneNumber from "../models/PhoneNumber";
+import TeamModel from "../models/Team";
 
 const SECRET_TOKEN = "randomstring_KLNL kn lk091830 knl";
 
@@ -155,5 +158,53 @@ export const loginAPI = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json(INTERNAL_SERVER_ERROR);
+  }
+};
+
+const sendMailInvite = async (newUser: UserDocument) => {
+  throw new Error("Invite not implemented");
+};
+
+export const userInvite = async (req: AuthenticatedRequest, res: Response) => {
+  const payload = req.body;
+  console.log(payload);
+  payload.password = NEW_USER_PASSWORD;
+  // Handle the error here
+  if (!payload.firstName || !payload.email || !payload.phoneNumberId) {
+    return res.status(400).json(INCOMPLETE_DATA);
+  }
+  try {
+    const hashedPassword = await generateHashedPassword(payload.password);
+
+    const createdUser = await UserModel.create({
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+      email: payload.email,
+      password: hashedPassword,
+      roles: [ROLES.NEW_USER],
+      phoneNumbers: payload.phoneNumberId,
+      company: req.user.companyId,
+      isOnline: false,
+    });
+    // Assign phone number to that user
+    await PhoneNumber.findByIdAndUpdate(payload.phoneNumberId, {
+      $push: { assignedTo: createdUser._id },
+    }).exec();
+    await TeamModel.findByIdAndUpdate(payload.teamId, {
+      $push: { users: createdUser._id },
+    }).exec();
+    // TODO: Implement this function
+    // await sendMailInvite(createdUser);
+    res.sendStatus(200).send("OK");
+  } catch (error) {
+    console.error(error);
+    if (
+      error.code === 11000 ||
+      error.message.includes("duplicate key error collection")
+    ) {
+      return res.status(400).json(DUPLICATE_EMAIL);
+    } else {
+      return res.status(500).json(INTERNAL_SERVER_ERROR);
+    }
   }
 };

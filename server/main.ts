@@ -11,11 +11,14 @@ import {
   isAdmin,
   loginAPI,
   signupAPI,
+  userInvite,
 } from "./routes/auth";
 import path from "path";
 import {
   buyNumber,
   getAvailablePhoneNumbers,
+  getPendingIncomingCalls,
+  handleIncomingCall,
   ivrMenu,
   ivrWelcome,
   twillioCallStart,
@@ -26,7 +29,12 @@ import {
 import UserModel from "./models/User";
 import { ROLES } from "./constants";
 import {
+  assignPhoneNumber,
   createCompnay,
+  createTeam,
+  getTeams,
+  getUserDetails,
+  getUsersByCompany,
   onlineUsers,
   userAddCompany,
   userAddRoles,
@@ -190,14 +198,24 @@ app.post("/api/signup", signupAPI);
 app.post("/api/login", loginAPI);
 
 /**
+ * USER CREATION ROUTES
+ *
+ */
+
+app.post("/api/user/invite", isAdmin, userInvite);
+
+/**
  * ADMIN ROUTES
  *
  * Contains all the requests only admin can make
  */
 
+app.post("/api/admin/user/invite", isAdmin, userInvite);
 app.get("/api/admin/user/online", isAdmin, onlineUsers);
 app.post("/api/admin/user/company", isAdmin, userAddCompany);
 app.post("/api/admin/user/roles", isAdmin, userAddRoles);
+app.post("/api/admin/user/get-company", isAdmin, getUsersByCompany);
+app.post("/api/admin/user", isAdmin, getUserDetails);
 app.post("/api/admin/company/new", isAdmin, createCompnay);
 
 /**
@@ -239,6 +257,9 @@ app.post("/api/twillio/phonenumber/buy", isAdmin, buyNumber);
 app.post("/api/twillio/ivr/welcome", ivrWelcome);
 app.post("/api/twillio/ivr/menu", ivrMenu);
 
+app.post("/api/twillio/incoming", handleIncomingCall);
+app.post("/api/twillio/incoming/pending", getPendingIncomingCalls);
+
 /**
  * Meta utility apis
  */
@@ -253,6 +274,16 @@ app.post("/api/call/getcsid", authenticateToken, getCallRecordCSID);
 
 app.get("/api/phonenumber/registered", isAdmin, getRegisteredPhoneNumbers);
 app.post("/api/phonenumber/new", isAdmin, addNumber);
+app.post("/api/phonenumber/assign", isAdmin, assignPhoneNumber);
+
+/**
+ *
+ * Team Utility
+ *
+ */
+
+app.post("/api/teams/new", isAdmin, createTeam);
+app.post("/api/teams", isAdmin, getTeams);
 
 app.get("/*", function (req, res) {
   res.sendFile(path.join(__dirname, "build", "index.html"));

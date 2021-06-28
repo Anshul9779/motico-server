@@ -1,6 +1,7 @@
 import { Schema, Types, model, Model, Document } from "mongoose";
 import { Company } from "./Company";
 import bcrypt from "bcrypt";
+import { PhoneNumberBase } from "./PhoneNumber";
 
 const UserSchema = new Schema(
   {
@@ -17,6 +18,12 @@ const UserSchema = new Schema(
       required: true,
       lowercase: true,
     },
+    phoneNumbers: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "PhoneNumber",
+      },
+    ],
     password: {
       type: String,
       required: true,
@@ -48,15 +55,18 @@ export interface UserBase extends Document, Record<string, unknown> {
   createdAt: Date;
   updatedAt: Date;
   company?: Types.ObjectId | Record<string, unknown>;
+  phoneNumbers?: Types.ObjectId[] | Record<string, unknown>[] | any[];
   isOnline: boolean;
 }
 
 export interface UserDocument extends UserBase {
   company?: Company["_id"];
+  phoneNumbers?: PhoneNumberBase["_id"][];
 }
 
 export interface UserPopulatedDocument extends UserBase {
   company?: Company;
+  phoneNumbers?: PhoneNumberBase[];
 }
 
 export interface TokenUser {

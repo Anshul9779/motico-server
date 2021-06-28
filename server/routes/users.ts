@@ -13,6 +13,8 @@ const ObjectId = Types.ObjectId;
 import UserModel from "./../models/User";
 import { AuthenticatedRequest } from "./auth";
 import Company from "./../models/Company";
+import TeamModel from "./../models/Team";
+import PhoneNumber from "./../models/PhoneNumber";
 
 /**
  * Online Users Details
@@ -135,4 +137,117 @@ export const createCompnay = async (
     console.error(error);
     res.status(500).json(INTERNAL_SERVER_ERROR);
   }
+};
+
+export const createTeam = async (req: AuthenticatedRequest, res: Response) => {
+  const payload = req.body;
+  if (!payload.name) {
+    return res.sendStatus(400).json(INCOMPLETE_DATA);
+  }
+  const name = payload.name;
+  const cascading = payload.cascading;
+  const userIds: string[] = payload.userIds;
+
+  const newTeam = await TeamModel.create({
+    name,
+    cascading,
+    company: req.user.companyId,
+    users: userIds,
+  });
+  return res.sendStatus(201).json({
+    id: newTeam._id,
+    name: newTeam.name,
+  });
+};
+
+export const getTeams = async (req: AuthenticatedRequest, res: Response) => {
+  const company = req.user.companyId;
+  const teams = await TeamModel.find({ company }).exec();
+  return res.json(
+    teams.map((team) => {
+      return {
+        id: team["_id"],
+        name: team["name"],
+        numUsers: team["users"].length,
+      };
+    })
+  );
+};
+
+export const addUserToTeam = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const payload = req.body;
+  if (!payload.userId || !payload.teamId) {
+    res.sendStatus(400).json(INCOMPLETE_DATA);
+  }
+
+  await TeamModel.findByIdAndUpdate(payload.teamId, {
+    $push: { users: payload.userId },
+  }).exec();
+  return res.sendStatus(200).send("OK");
+};
+
+export const deleteTeam = async (req: AuthenticatedRequest, res: Response) => {
+  const payload = req.body;
+  if (!payload.teamId) {
+    res.sendStatus(400).json(INCOMPLETE_DATA);
+  }
+  await TeamModel.findByIdAndDelete(payload.teamId).exec();
+  res.sendStatus(200).send("Deleted");
+};
+
+export const getUsersByCompany = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const companyId = req.user.companyId;
+  const users = await UserModel.find({ company: companyId }).exec();
+  const data = users.map((u) => {
+    return {
+      id: u._id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      phoneNumbers: u.phoneNumbers,
+    };
+  });
+  return res.json(data);
+};
+
+export const assignPhoneNumber = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const phoneNumberIds: string[] = req.body.phoneNumberIds;
+  const userId = req.body.userId;
+  await UserModel.findByIdAndUpdate(userId, {
+    phoneNumbers: phoneNumberIds,
+  }).exec();
+  await Promise.all(
+    phoneNumberIds.map(async (phoneId) => {
+      const phoneData = await PhoneNumber.findById(phoneId).exec();
+      if (!phoneData.assignedTo.includes(userId)) {
+        phoneData.assignedTo.push(userId);
+      }
+      await phoneData.save();
+    })
+  );
+  return res.json({
+    message: "OK",
+  });
+};
+
+export const getUserDetails = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const userId = req.body.userId;
+  const user = await UserModel.findById(userId).exec();
+  return res.json({
+    ...user,
+    id: user._id,
+    _id: undefined,
+  });
 };

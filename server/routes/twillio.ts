@@ -87,6 +87,7 @@ export const twillioConnect = async (req: Request, res: Response) => {
   const callerId = req.body.from;
   const callRecordID = req.body.callRecordID;
   const isAdmin = req.body.isAdmin;
+  const isIncoming = req.body.isIncoming;
   // Here check if the ID is correct or not
   const callRecord = await CallRecordModel.findOne({
     _id: callRecordID,
@@ -109,7 +110,13 @@ export const twillioConnect = async (req: Request, res: Response) => {
   // Admin will join the conf while agent and user would be talking
 
   const twiml = new VoiceResponse();
-
+  if (isIncoming && isIncoming === "true") {
+    const dial = twiml.dial();
+    console.log("Incoming joingin conf", callRecordID);
+    dial.conference(`conf_${callRecordID}`);
+    res.type("text/xml");
+    return res.send(twiml.toString());
+  }
   if (isAdmin === "false") {
     // Agent and User
     let name = "conf_" + callRecordID;
@@ -132,7 +139,7 @@ export const twillioConnect = async (req: Request, res: Response) => {
       "Content-Type": "application/xml",
       "Cache-Control": "public, max-age=0",
     });
-    res.send(twiml.toString());
+    return res.send(twiml.toString());
   } else {
     // Convert Existing call to conf call.
     console.log("Call SID", callRecord.callSid);
@@ -146,7 +153,7 @@ export const twillioConnect = async (req: Request, res: Response) => {
     console.log("Admin joingin conf", callRecordID);
     dial.conference({ beep: "false" }, `conf_${callRecordID}`);
     res.type("text/xml");
-    res.send(twiml.toString());
+    return res.send(twiml.toString());
   }
 };
 
@@ -291,7 +298,7 @@ export const ivrMenu = async (req: Request, res: Response) => {
     return res.send(twiml.toString());
   } else if (digit === "2") {
     const twiml = new VoiceResponse();
-    twiml.dial(
+    twiml.say(
       "Motico Solutions provides Voice Over Internet Protocol Services."
     );
     twiml.say(
@@ -301,4 +308,53 @@ export const ivrMenu = async (req: Request, res: Response) => {
   } else res.send(terminateCall());
 };
 
-// How to
+// Handle Incoming Call->
+/**
+ *
+ * By default, when the call comes, add the user to a conference.
+ * Then, when Agents wants to join  the call-> Add agent to conference.
+ *
+ * In Incoming Calls, from would be incoming number and to would be agents number;
+ *
+ */
+
+export const handleIncomingCall = async (req: Request, res: Response) => {
+  console.log("Incoming", req.body);
+  const phoneNumber = await PhoneNumberModel.findOne({
+    number: req.body.To,
+  }).exec();
+  const twiml = new VoiceResponse();
+  const callRecordDetails = {
+    from: req.body.From,
+    to: req.body.To,
+    type: "INCOMING",
+    isActive: true,
+    company: phoneNumber.company,
+    callSid: "",
+  };
+  // Start a Call Record and Return the ID;
+  const callRecord = await CallRecordModel.create(callRecordDetails);
+  twiml.say("Thank you for calling us. An agent will join in some time.");
+  const dial = twiml.dial();
+  dial.conference(`conf_${callRecord._id}`);
+  return res.send(twiml.toString());
+};
+
+export const getPendingIncomingCalls = (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const number = req.body.phoneNumber;
+  const pendingCalls = CallRecordModel.find({
+    from: number,
+    type: "INCOMING",
+    isActive: true,
+  });
+  res.sendStatus(200).json(
+    pendingCalls.map((call) => {
+      return {
+        callRecordId: call._id,
+      };
+    })
+  );
+};
