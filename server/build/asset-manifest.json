@@ -1,23 +1,24 @@
 {
   "files": {
     "main.css": "/static/css/main.02305f57.chunk.css",
-    "main.js": "/static/js/main.572251eb.chunk.js",
-    "main.js.map": "/static/js/main.572251eb.chunk.js.map",
-    "runtime-main.js": "/static/js/runtime-main.c00f0014.js",
-    "runtime-main.js.map": "/static/js/runtime-main.c00f0014.js.map",
+    "main.js": "/static/js/main.db00bbb2.chunk.js",
+    "main.js.map": "/static/js/main.db00bbb2.chunk.js.map",
+    "runtime-main.js": "/static/js/runtime-main.997dd299.js",
+    "runtime-main.js.map": "/static/js/runtime-main.997dd299.js.map",
     "static/css/2.65aefc5a.chunk.css": "/static/css/2.65aefc5a.chunk.css",
-    "static/js/2.b77125a3.chunk.js": "/static/js/2.b77125a3.chunk.js",
-    "static/js/2.b77125a3.chunk.js.map": "/static/js/2.b77125a3.chunk.js.map",
-    "static/js/3.d9f731a7.chunk.js": "/static/js/3.d9f731a7.chunk.js",
-    "static/js/3.d9f731a7.chunk.js.map": "/static/js/3.d9f731a7.chunk.js.map",
+    "static/js/2.e3c0fff2.chunk.js": "/static/js/2.e3c0fff2.chunk.js",
+    "static/js/2.e3c0fff2.chunk.js.map": "/static/js/2.e3c0fff2.chunk.js.map",
+    "static/js/3.b948bd98.chunk.js": "/static/js/3.b948bd98.chunk.js",
+    "static/js/3.b948bd98.chunk.js.map": "/static/js/3.b948bd98.chunk.js.map",
     "index.html": "/index.html",
     "static/css/2.65aefc5a.chunk.css.map": "/static/css/2.65aefc5a.chunk.css.map",
     "static/css/main.02305f57.chunk.css.map": "/static/css/main.02305f57.chunk.css.map",
-    "static/js/2.b77125a3.chunk.js.LICENSE.txt": "/static/js/2.b77125a3.chunk.js.LICENSE.txt",
+    "static/js/2.e3c0fff2.chunk.js.LICENSE.txt": "/static/js/2.e3c0fff2.chunk.js.LICENSE.txt",
     "static/media/MotiCo Logo.png": "/static/media/MotiCo Logo.4801567b.png",
-    "static/media/analytics.jpg": "/static/media/analytics.75012432.jpg",
+    "static/media/analytics.png": "/static/media/analytics.bbe7fdb4.png",
     "static/media/barge.jpg": "/static/media/barge.a63441f7.jpg",
     "static/media/call_summary.jpg": "/static/media/call_summary.1fcd062f.jpg",
+    "static/media/callduration.png": "/static/media/callduration.cbbfdf97.png",
     "static/media/clock.png": "/static/media/clock.3f0d7b02.png",
     "static/media/live_activity.jpg": "/static/media/live_activity.d2024e97.jpg",
     "static/media/login_bg.png": "/static/media/login_bg.aad99272.png",
@@ -26,10 +27,10 @@
     "static/media/whispher.jpg": "/static/media/whispher.b1214fea.jpg"
   },
   "entrypoints": [
-    "static/js/runtime-main.c00f0014.js",
+    "static/js/runtime-main.997dd299.js",
     "static/css/2.65aefc5a.chunk.css",
-    "static/js/2.b77125a3.chunk.js",
+    "static/js/2.e3c0fff2.chunk.js",
     "static/css/main.02305f57.chunk.css",
-    "static/js/main.572251eb.chunk.js"
+    "static/js/main.db00bbb2.chunk.js"
   ]
 }

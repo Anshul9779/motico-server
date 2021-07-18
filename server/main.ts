@@ -12,6 +12,7 @@ import {
   loginAPI,
   signupAPI,
   userInvite,
+  userPasswordReset,
 } from "./routes/auth";
 import path from "path";
 import {
@@ -32,6 +33,8 @@ import {
   assignPhoneNumber,
   createCompnay,
   createTeam,
+  deleteTeam,
+  deleteUser,
   getTeams,
   getUserDetails,
   getUsersByCompany,
@@ -41,6 +44,7 @@ import {
 } from "./routes/users";
 import CallRecordModel, { CallRecordPopulated } from "./models/CallRecord";
 import {
+  callDuration,
   callRecordTime,
   getCallRecordCSID,
   totalCalls,
@@ -197,6 +201,7 @@ app.post("/api/signup", signupAPI);
 
 app.post("/api/login", loginAPI);
 
+app.post("/api/reset-password", userPasswordReset);
 /**
  * USER CREATION ROUTES
  *
@@ -212,6 +217,7 @@ app.post("/api/user/invite", isAdmin, userInvite);
 
 app.post("/api/admin/user/invite", isAdmin, userInvite);
 app.get("/api/admin/user/online", isAdmin, onlineUsers);
+app.post("/api/admin/user/delete", isAdmin, deleteUser);
 app.post("/api/admin/user/company", isAdmin, userAddCompany);
 app.post("/api/admin/user/roles", isAdmin, userAddRoles);
 app.post("/api/admin/user/get-company", isAdmin, getUsersByCompany);
@@ -264,6 +270,7 @@ app.post("/api/twillio/incoming/pending", getPendingIncomingCalls);
  * Meta utility apis
  */
 
+app.get("/api/call/call-duration", authenticateToken, callDuration);
 app.get("/api/call/analytics", authenticateToken, totalCalls);
 app.post("/api/call/time", authenticateToken, callRecordTime);
 app.post("/api/call/getcsid", authenticateToken, getCallRecordCSID);
@@ -283,6 +290,7 @@ app.post("/api/phonenumber/assign", isAdmin, assignPhoneNumber);
  */
 
 app.post("/api/teams/new", isAdmin, createTeam);
+app.post("/api/teams/delete", isAdmin, deleteTeam);
 app.post("/api/teams", isAdmin, getTeams);
 
 app.get("/*", function (req, res) {

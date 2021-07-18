@@ -1,4 +1,5 @@
 import {
+  DATA_INCORRECT,
   DUPLICATE_EMAIL,
   FORBIDDEN,
   INCOMPLETE_DATA,
@@ -181,7 +182,7 @@ export const userInvite = async (req: AuthenticatedRequest, res: Response) => {
       lastName: payload.lastName,
       email: payload.email,
       password: hashedPassword,
-      roles: [ROLES.NEW_USER],
+      roles: [ROLES.NEW_USER, ROLES.PASSWORD_RESET],
       phoneNumbers: payload.phoneNumberId,
       company: req.user.companyId,
       isOnline: false,
@@ -207,4 +208,44 @@ export const userInvite = async (req: AuthenticatedRequest, res: Response) => {
       return res.status(500).json(INTERNAL_SERVER_ERROR);
     }
   }
+};
+
+export const userPasswordReset = async (req: Request, res: Response) => {
+  const userId = req.body.userId;
+  const previousPassword = req.body.oldPassword;
+  const newPassword = req.body.newPassword;
+  if (!userId || !previousPassword || !newPassword) {
+    return res.json(INCOMPLETE_DATA);
+  }
+  const user = await UserModel.findById(userId).exec();
+  if (!user) {
+    return res.json(USER_NOT_FOUND);
+  }
+  // First verify the old password. Then reset the password.
+  const passwordMatched = await comparePassword(
+    previousPassword,
+    user.password
+  );
+  if (!passwordMatched) {
+    return res.json(DATA_INCORRECT);
+  }
+  // If password matched. Then renew the password and remove if reset_password is present;
+
+  user.password = await generateHashedPassword(newPassword);
+  user.roles = user.roles.filter((role) => role !== ROLES.PASSWORD_RESET);
+  await user.save();
+  const userDetails = {
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    roles: user.roles,
+    companyId: user.company,
+    issuedAt: new Date().getTime(),
+    id: user._id,
+  };
+  const token = generateAccessToken(userDetails);
+  return res.status(200).json({
+    token,
+    ...userDetails,
+  });
 };

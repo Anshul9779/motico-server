@@ -255,3 +255,42 @@ export const getUserDetails = async (
     id: user._id,
   });
 };
+
+export const deleteUser = async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.body.userId;
+  if (!userId) {
+    return res.json(INCOMPLETE_DATA);
+  }
+  // First remove from Teams
+  const teams = await TeamModel.find({
+    users: userId,
+  }).exec();
+  await Promise.all(
+    teams.map(async (team) => {
+      team.users = team.users.filter((id) => id !== userId);
+      return await team.save();
+    })
+  );
+
+  // Remove from PhoneNumbers
+  const phoneNumbers = await PhoneNumber.find({
+    assignedTo: userId,
+  });
+
+  await Promise.all(
+    phoneNumbers.map(async (phoneNumber) => {
+      phoneNumber.assignedTo = phoneNumber.assignedTo.filter(
+        (id) => id !== userId
+      );
+      return await phoneNumber.save();
+    })
+  );
+
+  // Now Delete the user
+
+  await UserModel.findByIdAndDelete(userId).exec();
+
+  return res.json({
+    message: "OK",
+  });
+};
