@@ -5,6 +5,7 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import { connect, connection } from "mongoose";
 import twilio from "twilio";
+import multer from "multer";
 import {
   AuthenticatedRequest,
   authenticateToken,
@@ -50,6 +51,7 @@ import {
   totalCalls,
 } from "./routes/callrecord";
 import { getRegisteredPhoneNumbers, addNumber } from "./routes/phonenumber";
+import { uploadAWS } from "./routes/aws";
 
 //Set up default mongoose connection
 const mongoDB = "mongodb://127.0.0.1:27017/twillio";
@@ -63,6 +65,9 @@ const io = new Server(server, {
   cors: {
     origin: "*",
   },
+});
+const upload = multer({
+  dest: "uploads/",
 });
 
 /**
@@ -101,7 +106,7 @@ io.on("connection", (socket) => {
       { isOnline: true }
     );
     if (!user) {
-      socket.disconnect();
+      return socket.disconnect();
     }
     userEmail = email;
     userCompany = user.company.toString();
@@ -127,7 +132,7 @@ io.on("connection", (socket) => {
         { email: userEmail },
         { isOnline: false }
       );
-      if (userCompany) {
+      if (userCompany && user) {
         io.to(userCompany).emit(SOCKET.USER_LOGOUT, {
           id: user._id,
         });
@@ -292,6 +297,13 @@ app.post("/api/phonenumber/assign", isAdmin, assignPhoneNumber);
 app.post("/api/teams/new", isAdmin, createTeam);
 app.post("/api/teams/delete", isAdmin, deleteTeam);
 app.post("/api/teams", isAdmin, getTeams);
+
+app.post(
+  "/api/aws/upload",
+  authenticateToken,
+  upload.single("file"),
+  uploadAWS
+);
 
 app.get("/*", function (req, res) {
   res.sendFile(path.join(__dirname, "build", "index.html"));

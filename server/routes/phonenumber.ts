@@ -44,3 +44,22 @@ export const addNumber = async (req: AuthenticatedRequest, res: Response) => {
     res.status(500).json(INTERNAL_SERVER_ERROR);
   }
 };
+
+/**
+ * Request Body should be
+ * {
+ *    audioKey : s3 bucket key
+ *    text : string
+ * }
+ */
+
+export const addGreetingMessage = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const { text, audioKey } = req.body;
+
+  if (!text || !audioKey) {
+    return res.json(INCOMPLETE_DATA);
+  }
+};
