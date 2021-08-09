@@ -25,3 +25,12 @@ export const s3FileUpload = (file: Express.Multer.File, key: string) => {
 
   return s3.upload(uploadParams).promise();
 };
+
+export const getAWSFileStream = (key: string) => {
+  return s3
+    .getObject({
+      Bucket: bucketName,
+      Key: key,
+    })
+    .createReadStream();
+};

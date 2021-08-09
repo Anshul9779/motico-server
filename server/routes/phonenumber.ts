@@ -2,6 +2,7 @@ import { INCOMPLETE_DATA, INTERNAL_SERVER_ERROR } from "../errors";
 import { Response } from "express";
 import PhoneNumber from "../models/PhoneNumber";
 import { AuthenticatedRequest } from "./auth";
+import NumberSetting from "../models/NumberSettings";
 
 export const getRegisteredPhoneNumbers = async (
   req: AuthenticatedRequest,
@@ -36,6 +37,17 @@ export const addNumber = async (req: AuthenticatedRequest, res: Response) => {
         isRecording: false,
         voiceMail: false,
         available: true,
+      });
+      // After creating the number, create the settings also
+      await NumberSetting.create({
+        phoneNumber: phoneNumber._id,
+        canRecord: false,
+        canPause: false,
+        documentStatus: "VERIFIED",
+        greetingMessageStatus: "DISABLED",
+        voiceMailStatus: "DISABLED",
+        ivrStatus: "DISABLED",
+        callQueing: true,
       });
       res.status(201).json(phoneNumber);
     }

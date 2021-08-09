@@ -56,7 +56,7 @@ const phoneNumberSchema = new Schema({
   },
 });
 
-export interface PhoneNumberBase extends Document {
+export interface PhoneNumberBase extends Document, Record<string, unknown> {
   name: string;
   cost: number;
   company: Types.ObjectId | Record<string, unknown>;

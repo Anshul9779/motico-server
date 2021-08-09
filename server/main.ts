@@ -6,6 +6,7 @@ import cors from "cors";
 import { connect, connection } from "mongoose";
 import twilio from "twilio";
 import multer from "multer";
+import migration from "./migrations";
 import {
   AuthenticatedRequest,
   authenticateToken,
@@ -52,6 +53,7 @@ import {
 } from "./routes/callrecord";
 import { getRegisteredPhoneNumbers, addNumber } from "./routes/phonenumber";
 import { uploadAWS } from "./routes/aws";
+import { getAWSFileStream } from "./s3";
 
 //Set up default mongoose connection
 const mongoDB = "mongodb://127.0.0.1:27017/twillio";
@@ -69,6 +71,8 @@ const io = new Server(server, {
 const upload = multer({
   dest: "uploads/",
 });
+
+migration();
 
 /**
  * Socket based Logic
@@ -304,6 +308,17 @@ app.post(
   upload.single("file"),
   uploadAWS
 );
+
+app.get("/api/aws/*", (req, res) => {
+  try {
+    const awsKey = req.path.substring(9);
+    const readStream = getAWSFileStream(awsKey);
+    readStream.pipe(res);
+  } catch (err) {
+    console.log("Error while accessing", req.path);
+    console.log(err);
+  }
+});
 
 app.get("/*", function (req, res) {
   res.sendFile(path.join(__dirname, "build", "index.html"));
