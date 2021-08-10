@@ -1,13 +1,109 @@
-// Basic APIs for Call Record
+import { AuthenticatedRequest } from "./../../routes/auth";
+import { Response } from "express";
+import CallRecordModel from "./../../models/CallRecord";
 import {
+  INTERNAL_SERVER_ERROR,
   DATA_INCORRECT,
   INCOMPLETE_DATA,
-  INTERNAL_SERVER_ERROR,
-} from "./../errors";
-import { Response } from "express";
-import CallRecordModel from "./../models/CallRecord";
-import { AuthenticatedRequest } from "./auth";
-import { InternalSymbolName } from "typescript";
+} from "./../../errors";
+
+export const callDuration = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  console.log("Called");
+  const inbound = await CallRecordModel.find({
+    company: req.user.companyId,
+    type: "INCOMING",
+    duration: {
+      $gt: 0,
+    },
+  }).exec();
+  const inboundDuration =
+    inbound.reduce((prev, curr) => prev + curr.duration, 0) / (1000 * 60); // Total in minutes
+  const outgoing = await CallRecordModel.find({
+    company: req.user.companyId,
+    type: "OUTGOING",
+    duration: {
+      $gt: 0,
+    },
+  }).exec();
+  const outgoingDuration =
+    outgoing.reduce((prev, curr) => prev + curr.duration, 0) / (1000 * 60); // Total in minutes
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth();
+  const date = new Date(currentYear, 0, 1);
+  const yearTalkTime = (
+    await CallRecordModel.find({
+      company: req.user.companyId,
+      duration: {
+        $gt: 0,
+      },
+      startTime: {
+        $gte: date.getTime(),
+      },
+    }).exec()
+  ).reduce((prev, curr) => prev + curr.duration, 0);
+  const weekDay = new Date().getDay();
+  const startWeekDate = new Date().getDay() - weekDay;
+  const monthTalktime = (
+    await CallRecordModel.find({
+      company: req.user.companyId,
+      duration: {
+        $gt: 0,
+      },
+      startTime: {
+        $gte: new Date(currentYear, currentMonth, 1).getTime(),
+      },
+    }).exec()
+  ).reduce((prev, curr) => {
+    console.log(curr._id);
+    return prev + curr.duration;
+  }, 0);
+
+  const weekTalktime = (
+    await CallRecordModel.find({
+      company: req.user.companyId,
+      duration: {
+        $gt: 0,
+      },
+      startTime: {
+        $gte: new Date(currentYear, currentMonth, startWeekDate).getTime(),
+      },
+    }).exec()
+  ).reduce((prev, curr) => {
+    console.log(curr._id);
+    return prev + curr.duration;
+  }, 0);
+
+  const todayTalkTime = (
+    await CallRecordModel.find({
+      company: req.user.companyId,
+      duration: {
+        $gt: 0,
+      },
+      startTime: {
+        $gte: new Date(
+          currentYear,
+          currentMonth,
+          new Date().getDate()
+        ).getTime(),
+      },
+    }).exec()
+  ).reduce((prev, curr) => {
+    console.log(curr._id);
+    return prev + curr.duration;
+  }, 0);
+
+  return res.json({
+    inboundDuration,
+    outgoingDuration,
+    yearTalkTime,
+    monthTalktime,
+    weekTalktime,
+    todayTalkTime,
+  });
+};
 
 export const totalCalls = async (req: AuthenticatedRequest, res: Response) => {
   // Details about total calls
@@ -158,9 +254,6 @@ export const callRecordTime = async (
   }
 };
 
-/**
- * POST REQUEST PROTECTED
- */
 export const getCallRecordCSID = async (
   req: AuthenticatedRequest,
   res: Response
@@ -182,102 +275,4 @@ export const getCallRecordCSID = async (
     console.error(error);
     res.status(500).json(INTERNAL_SERVER_ERROR);
   }
-};
-
-export const callDuration = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
-  console.log("Called");
-  const inbound = await CallRecordModel.find({
-    company: req.user.companyId,
-    type: "INCOMING",
-    duration: {
-      $gt: 0,
-    },
-  }).exec();
-  const inboundDuration =
-    inbound.reduce((prev, curr) => prev + curr.duration, 0) / (1000 * 60); // Total in minutes
-  const outgoing = await CallRecordModel.find({
-    company: req.user.companyId,
-    type: "OUTGOING",
-    duration: {
-      $gt: 0,
-    },
-  }).exec();
-  const outgoingDuration =
-    outgoing.reduce((prev, curr) => prev + curr.duration, 0) / (1000 * 60); // Total in minutes
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth();
-  const date = new Date(currentYear, 0, 1);
-  const yearTalkTime = (
-    await CallRecordModel.find({
-      company: req.user.companyId,
-      duration: {
-        $gt: 0,
-      },
-      startTime: {
-        $gte: date.getTime(),
-      },
-    }).exec()
-  ).reduce((prev, curr) => prev + curr.duration, 0);
-  const weekDay = new Date().getDay();
-  const startWeekDate = new Date().getDay() - weekDay;
-  const monthTalktime = (
-    await CallRecordModel.find({
-      company: req.user.companyId,
-      duration: {
-        $gt: 0,
-      },
-      startTime: {
-        $gte: new Date(currentYear, currentMonth, 1).getTime(),
-      },
-    }).exec()
-  ).reduce((prev, curr) => {
-    console.log(curr._id);
-    return prev + curr.duration;
-  }, 0);
-
-  const weekTalktime = (
-    await CallRecordModel.find({
-      company: req.user.companyId,
-      duration: {
-        $gt: 0,
-      },
-      startTime: {
-        $gte: new Date(currentYear, currentMonth, startWeekDate).getTime(),
-      },
-    }).exec()
-  ).reduce((prev, curr) => {
-    console.log(curr._id);
-    return prev + curr.duration;
-  }, 0);
-
-  const todayTalkTime = (
-    await CallRecordModel.find({
-      company: req.user.companyId,
-      duration: {
-        $gt: 0,
-      },
-      startTime: {
-        $gte: new Date(
-          currentYear,
-          currentMonth,
-          new Date().getDate()
-        ).getTime(),
-      },
-    }).exec()
-  ).reduce((prev, curr) => {
-    console.log(curr._id);
-    return prev + curr.duration;
-  }, 0);
-
-  return res.json({
-    inboundDuration,
-    outgoingDuration,
-    yearTalkTime,
-    monthTalktime,
-    weekTalktime,
-    todayTalkTime,
-  });
 };

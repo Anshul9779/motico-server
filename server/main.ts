@@ -1,3 +1,4 @@
+import "./env";
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
@@ -5,10 +6,12 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import { connect, connection } from "mongoose";
 import twilio from "twilio";
-import multer from "multer";
 import migration from "./migrations";
+import awsRouter from "./routers/aws";
+import phonenumberRouter from "./routers/phonenumber";
+import teamsRouter from "./routers/teams";
+import callRouter from "./routers/call";
 import {
-  AuthenticatedRequest,
   authenticateToken,
   isAdmin,
   loginAPI,
@@ -32,12 +35,8 @@ import {
 import UserModel from "./models/User";
 import { ROLES } from "./constants";
 import {
-  assignPhoneNumber,
   createCompnay,
-  createTeam,
-  deleteTeam,
   deleteUser,
-  getTeams,
   getUserDetails,
   getUsersByCompany,
   onlineUsers,
@@ -45,15 +44,7 @@ import {
   userAddRoles,
 } from "./routes/users";
 import CallRecordModel, { CallRecordPopulated } from "./models/CallRecord";
-import {
-  callDuration,
-  callRecordTime,
-  getCallRecordCSID,
-  totalCalls,
-} from "./routes/callrecord";
-import { getRegisteredPhoneNumbers, addNumber } from "./routes/phonenumber";
-import { uploadAWS } from "./routes/aws";
-import { getAWSFileStream } from "./s3";
+import migrations from "./migrations";
 
 //Set up default mongoose connection
 const mongoDB = "mongodb://127.0.0.1:27017/twillio";
@@ -67,9 +58,6 @@ const io = new Server(server, {
   cors: {
     origin: "*",
   },
-});
-const upload = multer({
-  dest: "uploads/",
 });
 
 migration();
@@ -279,45 +267,19 @@ app.post("/api/twillio/incoming/pending", getPendingIncomingCalls);
  * Meta utility apis
  */
 
-app.get("/api/call/call-duration", authenticateToken, callDuration);
-app.get("/api/call/analytics", authenticateToken, totalCalls);
-app.post("/api/call/time", authenticateToken, callRecordTime);
-app.post("/api/call/getcsid", authenticateToken, getCallRecordCSID);
+app.use("/api/call", callRouter);
+app.use("/api/aws", awsRouter);
+app.use("/api/phonenumber", phonenumberRouter);
+app.use("/api/teams", teamsRouter);
 
-/**
- * Phone number utility
- */
-
-app.get("/api/phonenumber/registered", isAdmin, getRegisteredPhoneNumbers);
-app.post("/api/phonenumber/new", isAdmin, addNumber);
-app.post("/api/phonenumber/assign", isAdmin, assignPhoneNumber);
-
-/**
- *
- * Team Utility
- *
- */
-
-app.post("/api/teams/new", isAdmin, createTeam);
-app.post("/api/teams/delete", isAdmin, deleteTeam);
-app.post("/api/teams", isAdmin, getTeams);
-
-app.post(
-  "/api/aws/upload",
-  authenticateToken,
-  upload.single("file"),
-  uploadAWS
-);
-
-app.get("/api/aws/*", (req, res) => {
-  try {
-    const awsKey = req.path.substring(9);
-    const readStream = getAWSFileStream(awsKey);
-    readStream.pipe(res);
-  } catch (err) {
-    console.log("Error while accessing", req.path);
-    console.log(err);
-  }
+app.get("/api/migrations", (req, res) => {
+  migrations()
+    .then(() => {
+      res.send("DONE");
+    })
+    .catch((err) => {
+      res.send("ERROR");
+    });
 });
 
 app.get("/*", function (req, res) {

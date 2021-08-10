@@ -1,9 +1,9 @@
-import { AuthenticatedRequest } from "./auth";
 import fs from "fs";
+import { AuthenticatedRequest } from "./../../routes/auth";
 import { promisify } from "util";
+import { INCOMPLETE_DATA } from "./../../errors";
+import { s3FileUpload } from "./utils";
 import { Response } from "express";
-import { INCOMPLETE_DATA } from "./../errors";
-import { s3FileUpload } from "./../s3";
 
 const deleteFile = promisify(fs.unlink);
 

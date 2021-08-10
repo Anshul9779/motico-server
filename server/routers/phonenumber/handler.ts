@@ -1,8 +1,9 @@
-import { INCOMPLETE_DATA, INTERNAL_SERVER_ERROR } from "../errors";
+import { INCOMPLETE_DATA, INTERNAL_SERVER_ERROR } from "./../../errors";
 import { Response } from "express";
-import PhoneNumber from "../models/PhoneNumber";
-import { AuthenticatedRequest } from "./auth";
-import NumberSetting from "../models/NumberSettings";
+import { AuthenticatedRequest } from "./../../routes/auth";
+import PhoneNumber from "./../../models/PhoneNumber";
+import NumberSetting from "./../../models/NumberSettings";
+import UserModel from "./../../models/User";
 
 export const getRegisteredPhoneNumbers = async (
   req: AuthenticatedRequest,
@@ -56,7 +57,6 @@ export const addNumber = async (req: AuthenticatedRequest, res: Response) => {
     res.status(500).json(INTERNAL_SERVER_ERROR);
   }
 };
-
 /**
  * Request Body should be
  * {
@@ -74,4 +74,27 @@ export const addGreetingMessage = async (
   if (!text || !audioKey) {
     return res.json(INCOMPLETE_DATA);
   }
+};
+
+export const assignPhoneNumber = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const phoneNumberIds: string[] = req.body.phoneNumberIds;
+  const userId = req.body.userId;
+  await UserModel.findByIdAndUpdate(userId, {
+    phoneNumbers: phoneNumberIds,
+  }).exec();
+  await Promise.all(
+    phoneNumberIds.map(async (phoneId) => {
+      const phoneData = await PhoneNumber.findById(phoneId).exec();
+      if (!phoneData.assignedTo.includes(userId)) {
+        phoneData.assignedTo.push(userId);
+      }
+      await phoneData.save();
+    })
+  );
+  return res.json({
+    message: "OK",
+  });
 };

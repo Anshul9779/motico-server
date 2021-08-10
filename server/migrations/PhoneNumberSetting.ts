@@ -7,10 +7,10 @@ const migration = async () => {
   const phoneNumbers = await PhoneNumber.find().exec();
   await Promise.all(
     phoneNumbers.map(async (phoneNumber) => {
-      const numberSetting = NumberSetting.find({
+      const numberSetting = await NumberSetting.find({
         phoneNumber: phoneNumber._id,
-      });
-      if (!numberSetting) {
+      }).exec();
+      if (numberSetting.length === 0) {
         // Create one
         await NumberSetting.create({
           phoneNumber: phoneNumber._id,

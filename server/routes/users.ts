@@ -139,41 +139,6 @@ export const createCompnay = async (
   }
 };
 
-export const createTeam = async (req: AuthenticatedRequest, res: Response) => {
-  const payload = req.body;
-  if (!payload.name) {
-    return res.sendStatus(400).json(INCOMPLETE_DATA);
-  }
-  const name = payload.name;
-  const cascading = payload.cascading;
-  const userIds: string[] = payload.userIds;
-
-  const newTeam = await TeamModel.create({
-    name,
-    cascading,
-    company: req.user.companyId,
-    users: userIds,
-  });
-  return res.sendStatus(201).json({
-    id: newTeam._id,
-    name: newTeam.name,
-  });
-};
-
-export const getTeams = async (req: AuthenticatedRequest, res: Response) => {
-  const company = req.user.companyId;
-  const teams = await TeamModel.find({ company }).exec();
-  return res.json(
-    teams.map((team) => {
-      return {
-        id: team["_id"],
-        name: team["name"],
-        numUsers: team["users"].length,
-      };
-    })
-  );
-};
-
 export const addUserToTeam = async (
   req: AuthenticatedRequest,
   res: Response
@@ -187,15 +152,6 @@ export const addUserToTeam = async (
     $push: { users: payload.userId },
   }).exec();
   return res.sendStatus(200).send("OK");
-};
-
-export const deleteTeam = async (req: AuthenticatedRequest, res: Response) => {
-  const payload = req.body;
-  if (!payload.teamId) {
-    res.sendStatus(400).json(INCOMPLETE_DATA);
-  }
-  await TeamModel.findByIdAndDelete(payload.teamId).exec();
-  res.sendStatus(200).send("Deleted");
 };
 
 export const getUsersByCompany = async (
@@ -214,29 +170,6 @@ export const getUsersByCompany = async (
     };
   });
   return res.json(data);
-};
-
-export const assignPhoneNumber = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
-  const phoneNumberIds: string[] = req.body.phoneNumberIds;
-  const userId = req.body.userId;
-  await UserModel.findByIdAndUpdate(userId, {
-    phoneNumbers: phoneNumberIds,
-  }).exec();
-  await Promise.all(
-    phoneNumberIds.map(async (phoneId) => {
-      const phoneData = await PhoneNumber.findById(phoneId).exec();
-      if (!phoneData.assignedTo.includes(userId)) {
-        phoneData.assignedTo.push(userId);
-      }
-      await phoneData.save();
-    })
-  );
-  return res.json({
-    message: "OK",
-  });
 };
 
 export const getUserDetails = async (
