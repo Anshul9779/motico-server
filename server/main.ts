@@ -5,14 +5,13 @@ import { Server } from "socket.io";
 import bodyParser from "body-parser";
 import cors from "cors";
 import { connect, connection } from "mongoose";
-import twilio from "twilio";
 import migration from "./migrations";
 import awsRouter from "./routers/aws";
 import phonenumberRouter from "./routers/phonenumber";
 import teamsRouter from "./routers/teams";
 import callRouter from "./routers/call";
+import twillioRouter from "./routers/twillio";
 import {
-  authenticateToken,
   isAdmin,
   loginAPI,
   signupAPI,
@@ -20,18 +19,6 @@ import {
   userPasswordReset,
 } from "./routes/auth";
 import path from "path";
-import {
-  buyNumber,
-  getAvailablePhoneNumbers,
-  getPendingIncomingCalls,
-  handleIncomingCall,
-  ivrMenu,
-  ivrWelcome,
-  twillioCallStart,
-  twillioConfTwiML,
-  twillioConnect,
-  twillioToken,
-} from "./routes/twillio";
 import UserModel from "./models/User";
 import { ROLES } from "./constants";
 import {
@@ -228,49 +215,24 @@ app.post("/api/admin/company/new", isAdmin, createCompnay);
  *
  */
 
-app.get("/api/twillio/token", authenticateToken, twillioToken);
-
 app.get("/api/status", (req, res) => {
   res.status(200).json({
     message: "Hi, from server",
   });
 });
 
-// Expects a Query Param as callId
-app.post(
-  "/api/twillio/call/:sid/add-participant/:callerId/:phone",
-  twillioConfTwiML
-);
-
-app.post(
-  "/api/twillio/connect",
-  twilio.webhook({ validate: false }),
-  twillioConnect
-);
-
-app.post("/api/twillio/outgoing/start", authenticateToken, twillioCallStart);
-
-app.post(
-  "/api/twillio/phonenumber/search",
-  authenticateToken,
-  getAvailablePhoneNumbers
-);
-
-app.post("/api/twillio/phonenumber/buy", isAdmin, buyNumber);
-app.post("/api/twillio/ivr/welcome", ivrWelcome);
-app.post("/api/twillio/ivr/menu", ivrMenu);
-
-app.post("/api/twillio/incoming", handleIncomingCall);
-app.post("/api/twillio/incoming/pending", getPendingIncomingCalls);
+// TODO Change this to /calls/pending
+// router.post("/incoming/pending", getPendingIncomingCalls);
 
 /**
  * Meta utility apis
  */
-
+// https://stackoverflow.com/a/67560007/8077711 use this pls
 app.use("/api/call", callRouter);
 app.use("/api/aws", awsRouter);
 app.use("/api/phonenumber", phonenumberRouter);
 app.use("/api/teams", teamsRouter);
+app.use("/api/twillio", twillioRouter);
 
 app.get("/api/migrations", (req, res) => {
   migrations()
