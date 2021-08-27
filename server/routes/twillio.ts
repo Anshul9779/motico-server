@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from "./auth";
 
 import VoiceResponse from "twilio/lib/twiml/VoiceResponse";
 import CallRecordModel from "./../models/CallRecord";
+import { terminateCall } from "./../routers/twillio/utils/incoming/utils";
 /**
  * Twillio Call Connect
  *

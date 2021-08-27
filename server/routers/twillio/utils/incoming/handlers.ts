@@ -1,5 +1,5 @@
 // Handles the incoming call stuff
-import { Response } from "express";
+import { Response, Request } from "express";
 import NumberSetting from "./../../../../models/NumberSettings";
 import CallRecordModel from "./../../../../models/CallRecord";
 import PhoneNumberModel from "./../../../../models/PhoneNumber";
