@@ -50,6 +50,11 @@ const numberSettingSchema = new Schema({
     required: false,
     default: "",
   },
+  ivrData: {
+    type: String,
+    required: false,
+    default: "",
+  },
   callQueing: {
     type: Boolean,
     required: true,
@@ -69,6 +74,7 @@ export interface NumberSettingBase extends Document, Record<string, unknown> {
   ivrStatus: Status;
   ivrInfo: string;
   callQueing: boolean;
+  ivrData: string;
 }
 
 export interface NumberSettingDocument extends NumberSettingBase {

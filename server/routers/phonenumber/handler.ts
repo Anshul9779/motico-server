@@ -98,3 +98,30 @@ export const assignPhoneNumber = async (
     message: "OK",
   });
 };
+
+export const getNumberSettings = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const number = req.body.number;
+  const setting = await (
+    await NumberSetting.findOne({ phoneNumber: number })
+  )
+    // @ts-ignore
+    .execPopulate("phoneNumber");
+  return res.send(setting);
+};
+
+export const updateNumberSetting = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const id = req.body.setting._id;
+    await NumberSetting.findOneAndUpdate({ _id: id }, req.body.setting).exec();
+    return res.send("Updated");
+  } catch (e) {
+    console.log("Error", e);
+    return res.status(500);
+  }
+};

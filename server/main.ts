@@ -35,7 +35,11 @@ import migrations from "./migrations";
 
 //Set up default mongoose connection
 const mongoDB = "mongodb://127.0.0.1:27017/twillio";
-connect(mongoDB, { useNewUrlParser: true, useUnifiedTopology: true });
+connect(mongoDB, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  useFindAndModify: false,
+});
 const db = connection;
 db.on("error", console.error.bind(console, "MongoDB Connection Error"));
 

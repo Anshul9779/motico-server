@@ -1,9 +1,11 @@
 import { Router } from "express";
-import { isAdmin } from "./../../routes/auth";
+import { authenticateToken, isAdmin } from "./../../routes/auth";
 import {
   addNumber,
   assignPhoneNumber,
+  getNumberSettings,
   getRegisteredPhoneNumbers,
+  updateNumberSetting,
 } from "./handler";
 
 const router = Router();
@@ -11,5 +13,7 @@ const router = Router();
 router.get("/registered", isAdmin, getRegisteredPhoneNumbers);
 router.post("/new", isAdmin, addNumber);
 router.post("/assign", isAdmin, assignPhoneNumber);
+router.post("/settings", authenticateToken, getNumberSettings);
+router.put("/settings", authenticateToken, updateNumberSetting);
 
 export default router;

@@ -14,6 +14,7 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
    * 2. Agent available or dial tone ?
    * 3. Connecting to Agent, Greeting Music
    */
+  console.log("Incoming", req.body);
   if (!req.body) {
     return "ERR";
   }
@@ -46,6 +47,7 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
   // Number 1. IVR
   if (setting.ivrStatus !== "DISABLED") {
     // DO IVR WAITING STUFF
+    console.log("Transfering to IVR");
     return res.send(ivrStep1(callRecord._id, setting));
   }
   const twiml = new VoiceResponse();
@@ -53,8 +55,9 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
   // TODO: Check if it goes to voicemail ?
   // Check if agents are available?
 
-  if (setting.greetingStatus !== "DISABLED") {
+  if (setting.greetingMessageStatus !== "DISABLED") {
     // handle the greeting stuff
+    console.log("Transferring to greeting");
     if (setting.greetingMessageStatus === "TEXT") {
       twiml.say(setting.greetingMessageInfo);
     } else {
@@ -66,6 +69,7 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
     dial.conference(`conf_${callRecord._id}`);
     return res.send(twiml.toString());
   }
+  console.log("Default");
 
   twiml.say("Thank you for calling us. An agent will join in some time.");
   const dial = twiml.dial();

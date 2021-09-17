@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authenticateToken } from "./../../../../routes/auth";
 import twilio from "twilio";
 import { confConnect, getCallRecordID, outgoingStart } from "./handlers";
 
@@ -16,7 +17,7 @@ const router = Router();
 
 router.post("/", twilio.webhook({ validate: false }), outgoingStart);
 
-router.post("/id", getCallRecordID);
+router.post("/id", authenticateToken, getCallRecordID);
 router.post("/conf/:sid/add-participant/:callerId/:phone", confConnect);
 
 export default router;

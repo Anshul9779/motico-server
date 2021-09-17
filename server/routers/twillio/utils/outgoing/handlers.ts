@@ -65,7 +65,7 @@ export const confConnect = async (req: Request, res: Response) => {
 };
 
 export const outgoingStart = async (req: Request, res: Response) => {
-  console.log(req.body);
+  console.log("Outgoing", req.body);
   const phoneNumber = req.body.to;
   const callerId = req.body.from;
   const callRecordID = req.body.callRecordID;
