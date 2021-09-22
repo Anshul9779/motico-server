@@ -62,7 +62,7 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
       twiml.say(setting.greetingMessageInfo);
     } else {
       twiml.play(
-        `https://motiocosolutions/api/aws/${setting.greetingMessageInfo}`
+        `https://api.twilio.com/cowbell.mp3`
       );
     }
     const dial = twiml.dial();
