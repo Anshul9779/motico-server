@@ -80,23 +80,28 @@ export const assignPhoneNumber = async (
   req: AuthenticatedRequest,
   res: Response
 ) => {
-  const phoneNumberIds: string[] = req.body.phoneNumberIds;
-  const userId = req.body.userId;
-  await UserModel.findByIdAndUpdate(userId, {
-    phoneNumbers: phoneNumberIds,
-  }).exec();
-  await Promise.all(
-    phoneNumberIds.map(async (phoneId) => {
-      const phoneData = await PhoneNumber.findById(phoneId).exec();
-      if (!phoneData.assignedTo.includes(userId)) {
-        phoneData.assignedTo.push(userId);
-      }
-      await phoneData.save();
-    })
-  );
-  return res.json({
-    message: "OK",
-  });
+  try {
+    const phoneNumberIds: string[] = req.body.phoneNumberIds;
+    const userId = req.body.userId;
+    await UserModel.findByIdAndUpdate(userId, {
+      phoneNumbers: phoneNumberIds,
+    }).exec();
+    await Promise.all(
+      phoneNumberIds.map(async (phoneId) => {
+        const phoneData = await PhoneNumber.findById(phoneId).exec();
+        if (!phoneData.assignedTo.includes(userId)) {
+          phoneData.assignedTo.push(userId);
+        }
+        await phoneData.save();
+      })
+    );
+    return res.json({
+      message: "OK",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.json(INTERNAL_SERVER_ERROR);
+  }
 };
 
 export const getNumberSettings = async (

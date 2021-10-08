@@ -70,20 +70,35 @@ export const getAvailablePhoneNumbers = async (
     const areaCode = req.body.areaCode;
     const region = req.body.region;
     if (type === "LOCAL") {
-      const numbers = await client
-        .availablePhoneNumbers(country)
-        .local.list({ areaCode, limit: 20, inRegion: region });
-      return res.status(200).json(numbers);
+      try {
+        const numbers = await client
+          .availablePhoneNumbers(country)
+          .local.list({ areaCode, limit: 20, inRegion: region });
+        return res.status(200).json(numbers);
+      } catch (error) {
+        console.error(error);
+        return res.send(500).json(INTERNAL_SERVER_ERROR);
+      }
     } else if (type === "TOLLFREE") {
-      const numbers = await client
-        .availablePhoneNumbers(country)
-        .tollFree.list({ areaCode, limit: 20, inRegion: region });
-      return res.status(200).json(numbers);
+      try {
+        const numbers = await client
+          .availablePhoneNumbers(country)
+          .tollFree.list({ areaCode, limit: 20, inRegion: region });
+        return res.status(200).json(numbers);
+      } catch (error) {
+        console.error(error);
+        return res.send(500).json(INTERNAL_SERVER_ERROR);
+      }
     } else if (type === "MOBILE") {
-      const numbers = await client
-        .availablePhoneNumbers(country)
-        .mobile.list({ areaCode, limit: 20, inRegion: region });
-      return res.status(200).json(numbers);
+      try {
+        const numbers = await client
+          .availablePhoneNumbers(country)
+          .mobile.list({ areaCode, limit: 20, inRegion: region });
+        return res.status(200).json(numbers);
+      } catch (error) {
+        console.error(error);
+        return res.send(500).json(INTERNAL_SERVER_ERROR);
+      }
     } else {
       return res.status(400).json(DATA_INCORRECT);
     }
