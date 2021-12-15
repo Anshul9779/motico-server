@@ -143,87 +143,107 @@ export const addUserToTeam = async (
   req: AuthenticatedRequest,
   res: Response
 ) => {
-  const payload = req.body;
-  if (!payload.userId || !payload.teamId) {
-    res.sendStatus(400).json(INCOMPLETE_DATA);
-  }
+  try {
+    const payload = req.body;
+    if (!payload.userId || !payload.teamId) {
+      res.sendStatus(400).json(INCOMPLETE_DATA);
+    }
 
-  await TeamModel.findByIdAndUpdate(payload.teamId, {
-    $push: { users: payload.userId },
-  }).exec();
-  return res.sendStatus(200).send("OK");
+    await TeamModel.findByIdAndUpdate(payload.teamId, {
+      $push: { users: payload.userId },
+    }).exec();
+    return res.sendStatus(200).send("OK");
+  } catch (error) {
+    console.error(error);
+    return res.json(INTERNAL_SERVER_ERROR);
+  }
 };
 
 export const getUsersByCompany = async (
   req: AuthenticatedRequest,
   res: Response
 ) => {
-  const companyId = req.user.companyId;
-  const users = await UserModel.find({ company: companyId }).exec();
-  const data = users.map((u) => {
-    return {
-      id: u._id,
-      firstName: u.firstName,
-      lastName: u.lastName,
-      email: u.email,
-      phoneNumbers: u.phoneNumbers,
-    };
-  });
-  return res.json(data);
+  try {
+    const companyId = req.user.companyId;
+    const users = await UserModel.find({ company: companyId }).exec();
+    const data = users.map((u) => {
+      return {
+        id: u._id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        email: u.email,
+        phoneNumbers: u.phoneNumbers,
+      };
+    });
+    return res.json(data);
+  } catch (error) {
+    console.error(error);
+    return res.json(INTERNAL_SERVER_ERROR);
+  }
 };
 
 export const getUserDetails = async (
   req: AuthenticatedRequest,
   res: Response
 ) => {
-  const userId = req.body.userId;
-  const user = await UserModel.findById(userId).exec();
-  return res.json({
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    phoneNumbers: user.phoneNumbers,
-    roles: user.roles,
-    company: user.comany,
-    id: user._id,
-  });
+  try {
+    const userId = req.body.userId;
+    const user = await UserModel.findById(userId).exec();
+    return res.json({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phoneNumbers: user.phoneNumbers,
+      roles: user.roles,
+      company: user.comany,
+      id: user._id,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.json(INTERNAL_SERVER_ERROR);
+  }
 };
 
 export const deleteUser = async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.body.userId;
-  if (!userId) {
-    return res.json(INCOMPLETE_DATA);
+  try {
+    const userId = req.body.userId;
+    if (!userId) {
+      return res.json(INCOMPLETE_DATA);
+    }
+    // First remove from Teams
+    const teams = await TeamModel.find({
+      users: userId,
+    }).exec();
+    await Promise.all(
+      teams.map(async (team) => {
+        team.users = team.users.filter((id) => id !== userId);
+        return await team.save();
+      })
+    );
+
+    // Remove from PhoneNumbers
+    const phoneNumbers = await PhoneNumber.find({
+      assignedTo: userId,
+    });
+
+    await Promise.all(
+      phoneNumbers.map(async (phoneNumber) => {
+        phoneNumber.assignedTo = phoneNumber.assignedTo.filter(
+          (id) => id !== userId
+        );
+        return await phoneNumber.save();
+      })
+    );
+
+    // Now Delete the user
+
+    await UserModel.findByIdAndDelete(userId).exec();
+
+    return res.json({
+      message: "OK",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.json(INTERNAL_SERVER_ERROR);
   }
-  // First remove from Teams
-  const teams = await TeamModel.find({
-    users: userId,
-  }).exec();
-  await Promise.all(
-    teams.map(async (team) => {
-      team.users = team.users.filter((id) => id !== userId);
-      return await team.save();
-    })
-  );
-
-  // Remove from PhoneNumbers
-  const phoneNumbers = await PhoneNumber.find({
-    assignedTo: userId,
-  });
-
-  await Promise.all(
-    phoneNumbers.map(async (phoneNumber) => {
-      phoneNumber.assignedTo = phoneNumber.assignedTo.filter(
-        (id) => id !== userId
-      );
-      return await phoneNumber.save();
-    })
-  );
-
-  // Now Delete the user
-
-  await UserModel.findByIdAndDelete(userId).exec();
-
-  return res.json({
-    message: "OK",
-  });
 };
