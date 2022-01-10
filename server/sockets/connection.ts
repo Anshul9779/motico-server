@@ -24,7 +24,7 @@ export const onSocketConnect = async (
 
   // Emit this to admin-companyId;
   io.to(`admin-${tokenUser.companyId}`).emit(SOCKET.USER_ONLINE, {
-    id: user.id,
+    id: tokenUser.id,
     name: user.firstName + " " + (user.lastName ?? ""),
     // TODO: Add avatar url
     avatarURL: "",
@@ -35,7 +35,7 @@ export const onSocketConnect = async (
   // 2. Company Id => Only specific to a company
   // 3. "admin-${companyId}" => Only if user is admin for that company
 
-  socket.join(user.id);
+  socket.join(tokenUser.id);
   socket.join(tokenUser.companyId);
   if (tokenUser.roles.includes(ROLES.ADMIN)) {
     socket.join(`admin-${tokenUser.companyId}`);
