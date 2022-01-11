@@ -188,7 +188,9 @@ export const getUserDetails = async (
 ) => {
   try {
     const userId = req.body.userId;
-    const user = await UserModel.findById(userId).exec();
+    const user = await UserModel.findById(userId)
+      .populate("phoneNumbers")
+      .exec();
     return res.json({
       firstName: user.firstName,
       lastName: user.lastName,
