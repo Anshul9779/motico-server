@@ -9,6 +9,8 @@ import CallRecordModel from "./../../../../models/CallRecord";
 import twilio from "twilio";
 import config from "./../../../../config";
 import VoiceResponse from "twilio/lib/twiml/VoiceResponse";
+import { getIO } from "../../../../sockets";
+import SOCKET from "../../../../sockets/channels";
 
 const client = twilio(config.accountSid, config.authToken);
 
@@ -78,12 +80,16 @@ export const outgoingStart = async (req: Request, res: Response) => {
   if (!callRecord) {
     res.send(400).json(DATA_INCORRECT);
   }
-  if (isAdmin === "false") {
+  if (isAdmin === "false" || !callRecord.startTime) {
     // If ID is correct then mutate the data
     await CallRecordModel.findOneAndUpdate(
       { _id: callRecordID },
-      { startTime: new Date().getTime() }
+      { startTime: new Date().getTime(), callSid: req.body.CallSid }
     );
+    const io = getIO();
+    io.to(`admin-${callRecord.company}`).emit(SOCKET.CALL_ADD, {
+      id: callRecordID,
+    });
   }
 
   // Refer https://stackoverflow.com/a/41063359/8077711
@@ -138,4 +144,25 @@ export const outgoingStart = async (req: Request, res: Response) => {
     res.type("text/xml");
     return res.send(twiml.toString());
   }
+};
+
+export const endCallInDb = async (req: AuthenticatedRequest, res: Response) => {
+  const callRecordID = req.body.callId as string;
+  // Here check if the ID is correct or not
+  console.log("Ending the call", callRecordID);
+  const callRecord = await CallRecordModel.findOne({
+    _id: callRecordID,
+  }).exec();
+  if (!callRecord) {
+    return res.send(400).json(DATA_INCORRECT);
+  }
+  await CallRecordModel.findOneAndUpdate(
+    { _id: callRecordID },
+    { endTime: new Date().getTime(), isActive: false }
+  );
+  const io = getIO();
+  io.to(`admin-${callRecord.company}`).emit(SOCKET.CALL_END, {
+    id: callRecordID,
+  });
+  return res.send({ message: "OK" });
 };

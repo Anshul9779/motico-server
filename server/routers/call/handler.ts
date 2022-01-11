@@ -276,3 +276,32 @@ export const getCallRecordCSID = async (
     res.status(500).json(INTERNAL_SERVER_ERROR);
   }
 };
+
+export const getCallRecordFromId = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const id = req.body.id;
+  if (!id) {
+    return res.json(INCOMPLETE_DATA);
+  }
+  const data = await CallRecordModel.findById(id).populate("user").exec();
+  console.log({ data });
+  return res.status(200).json({
+    id: data._id,
+    callSid: data.callSid,
+    isActive: data.isActive,
+    startTime: data.startTime,
+    endTime: data.endTime,
+    from: data.from,
+    to: data.to,
+    user: {
+      firstName: data.user.firstName,
+      lastName: data.user.lastName,
+      email: data.user.email,
+      id: data.user._id,
+    },
+    type: data.type,
+    company: data.company,
+  });
+};
