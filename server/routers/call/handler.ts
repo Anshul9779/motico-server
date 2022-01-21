@@ -6,6 +6,7 @@ import {
   DATA_INCORRECT,
   INCOMPLETE_DATA,
 } from "./../../errors";
+import { awsKeyExists } from "../../routers/aws/utils";
 
 export const callDuration = async (
   req: AuthenticatedRequest,
@@ -304,4 +305,54 @@ export const getCallRecordFromId = async (
     type: data.type,
     company: data.company,
   });
+};
+
+export const getCallRecordings = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const companyId = req.user.companyId;
+
+  const callRecords = await CallRecordModel.find({
+    company: companyId,
+    startTime: {
+      $gte: 0,
+    },
+    endTime: {
+      $gte: 0,
+    },
+  })
+    .sort([["startTime", -1]])
+    .limit(15)
+    .populate("user")
+    .exec();
+
+  const data = await Promise.all(
+    callRecords.map(async (callRecord) => {
+      const recordingPath = `${companyId}/recordings/${callRecord._id}.ogg`;
+      let exists = false;
+      try {
+        exists = await awsKeyExists(recordingPath);
+      } catch (err) {
+        console.log("[aws] ", err);
+      }
+
+      return {
+        id: callRecord._id,
+        from: callRecord.from,
+        to: callRecord.to,
+        duration:
+          callRecord.duration || callRecord.endTime - callRecord.startTime,
+        user: {
+          id: callRecord.user._id,
+          name: callRecord.user.firstName,
+        },
+        startTime: callRecord.startTime,
+        type: callRecord.type,
+        recordingURL: exists ? recordingPath : null,
+      };
+    })
+  );
+
+  return res.status(200).json(data);
 };

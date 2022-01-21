@@ -5,6 +5,7 @@ import {
   callRecordTime,
   getCallRecordCSID,
   getCallRecordFromId,
+  getCallRecordings,
   totalCalls,
 } from "./handler";
 
@@ -16,6 +17,7 @@ router.use(authenticateToken);
 
 router.post("/id", authenticateToken, getCallRecordFromId);
 router.get("/call-duration", callDuration);
+router.get("/call-recording", authenticateToken, getCallRecordings);
 router.get("/analytics", totalCalls);
 router.post("/time", callRecordTime);
 router.post("/getcsid", getCallRecordCSID);

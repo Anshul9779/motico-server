@@ -22,6 +22,7 @@ router.get("/*", (req, res) => {
   } catch (err) {
     console.log("Error while accessing", req.path);
     console.log(err);
+    return res.status(404);
   }
 });
 

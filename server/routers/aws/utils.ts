@@ -12,6 +12,25 @@ const s3 = new S3({
   secretAccessKey,
 });
 
+export const awsKeyExists = async (key: string) => {
+  return await s3
+    .headObject({
+      Bucket: bucketName,
+      Key: key,
+    })
+    .promise()
+    .then(
+      () => true,
+      (err) => {
+        if (err.code === "NotFound") {
+          return false;
+        }
+        console.log("[aws] key check error", err);
+        return false;
+      }
+    );
+};
+
 // Uploads file to s3
 
 export const s3FileUpload = (file: Express.Multer.File, key: string) => {
