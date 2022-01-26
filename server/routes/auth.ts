@@ -150,6 +150,12 @@ export const loginAPI = async (req: Request, res: Response) => {
       companyId: user.company,
       issuedAt: new Date().getTime(),
       id: user._id,
+      phoneNumber: user.phoneNumber ?? "",
+      reciveUpdates: user.reciveUpdates ?? false,
+      missedCallAlert: user.missedCallAlert ?? false,
+      voicemailAlert: user.voicemailAlert ?? false,
+      dashboard: user.dashboard ?? false,
+      dialler: user.dialer ?? false,
     };
     const token = generateAccessToken(userDetails);
     return res.status(200).json({

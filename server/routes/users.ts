@@ -249,3 +249,44 @@ export const deleteUser = async (req: AuthenticatedRequest, res: Response) => {
     return res.json(INTERNAL_SERVER_ERROR);
   }
 };
+
+export const getMe = async (req: AuthenticatedRequest, res: Response) => {
+  const tokenUser = req.user;
+
+  const user = await UserModel.findById(tokenUser.id)
+    .populate("company")
+    .exec();
+
+  return res.json({
+    id: user._id,
+    company: user.company,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    phoneNumber: user.phoneNumber,
+    email: user.email,
+    reciveUpdates: user.reciveUpdates ?? false,
+    missedCallAlert: user.missedCallAlert ?? false,
+    voicemailAlert: user.voicemailAlert ?? false,
+    dashboard: user.dashboard ?? false,
+    dialler: user.dialler ?? false,
+  });
+};
+
+export const setMe = async (req: AuthenticatedRequest, res: Response) => {
+  const tokenUser = req.user;
+  const body = req.body;
+  const user = await UserModel.findByIdAndUpdate(tokenUser.id, { ...body });
+  return res.json({
+    id: user._id,
+    company: user.company,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    phoneNumber: user.phoneNumber,
+    email: user.email,
+    reciveUpdates: user.reciveUpdates ?? false,
+    missedCallAlert: user.missedCallAlert ?? false,
+    voicemailAlert: user.voicemailAlert ?? false,
+    dashboard: user.dashboard ?? false,
+    dialler: user.dialer ?? false,
+  });
+};

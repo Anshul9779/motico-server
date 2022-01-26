@@ -43,6 +43,11 @@ const CallRecordSchema = new Schema({
     required: true,
     enum: ["INCOMING", "OUTGOING", "MISSED"],
   },
+  voicemailURL: {
+    type: String,
+    required: false,
+    default: "",
+  },
 });
 
 export interface CallRecordBase extends Document {
@@ -58,6 +63,7 @@ export interface CallRecordBase extends Document {
   type: "INCOMING" | "OUTGOING" | "MISSED";
   isActive: boolean;
   callSid: string;
+  voicemailURL: string;
   company: Types.ObjectId | Record<string, unknown>;
 }
 

@@ -356,3 +356,48 @@ export const getCallRecordings = async (
 
   return res.status(200).json(data);
 };
+
+export const getCallVoicemails = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const companyId = req.user.companyId;
+
+  const callRecords = await CallRecordModel.find({
+    company: companyId,
+    startTime: {
+      $gte: 0,
+    },
+    endTime: {
+      $gte: 0,
+    },
+    type: {
+      $eq: "INCOMING",
+    },
+  })
+    .sort([["startTime", -1]])
+    .limit(15)
+    .populate("user")
+    .exec();
+
+  const data = await Promise.all(
+    callRecords.map(async (callRecord) => {
+      return {
+        id: callRecord._id,
+        from: callRecord.from,
+        to: callRecord.to,
+        duration:
+          callRecord.duration || callRecord.endTime - callRecord.startTime,
+        user: {
+          id: callRecord.user._id,
+          name: callRecord.user.firstName,
+        },
+        startTime: callRecord.startTime,
+        type: callRecord.type,
+        recordingURL: callRecord.voicemailURL || null,
+      };
+    })
+  );
+
+  return res.status(200).json(data);
+};

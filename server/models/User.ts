@@ -12,6 +12,36 @@ const UserSchema = new Schema(
     lastName: {
       type: String,
     },
+    phoneNumber: {
+      type: String,
+      required: false,
+      default: "",
+    },
+    reciveUpdates: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
+    missedCallAlert: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
+    voicemailAlert: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
+    dashboard: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
+    dialler: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
     email: {
       type: String,
       unique: true,
@@ -57,6 +87,12 @@ export interface UserBase extends Document, Record<string, unknown> {
   company?: Types.ObjectId | Record<string, unknown>;
   phoneNumbers?: Types.ObjectId[] | Record<string, unknown>[] | any[];
   isOnline: boolean;
+  phoneNumber: string;
+  reciveUpdates: boolean;
+  missedCallAlert: boolean;
+  voicemailAlert: boolean;
+  dashboard: boolean;
+  dialler: boolean;
 }
 
 export interface UserDocument extends UserBase {

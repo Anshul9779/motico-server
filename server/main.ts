@@ -12,6 +12,7 @@ import teamsRouter from "./routers/teams";
 import callRouter from "./routers/call";
 import twillioRouter from "./routers/twillio";
 import {
+  authenticateToken,
   isAdmin,
   loginAPI,
   signupAPI,
@@ -22,9 +23,11 @@ import path from "path";
 import {
   createCompnay,
   deleteUser,
+  getMe,
   getUserDetails,
   getUsersByCompany,
   onlineUsers,
+  setMe,
   userAddCompany,
   userAddRoles,
 } from "./routes/users";
@@ -98,6 +101,9 @@ app.post("/api/reset-password", userPasswordReset);
  */
 
 app.post("/api/user/invite", isAdmin, userInvite);
+
+app.get("/api/user/me", authenticateToken, getMe);
+app.post("/api/user/me", authenticateToken, setMe);
 
 /**
  * ADMIN ROUTES
