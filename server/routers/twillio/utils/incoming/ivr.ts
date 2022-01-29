@@ -1,6 +1,8 @@
-import NumberSetting, { NumberSettingDocument } from "./../../../../models/NumberSettings";
+import NumberSetting, {
+  NumberSettingDocument,
+} from "./../../../../models/NumberSettings";
 import VoiceResponse from "twilio/lib/twiml/VoiceResponse";
-import {  forwardCallTo } from "./department";
+import { forwardCallTo } from "./department";
 import { terminateCall } from "./utils";
 import CallRecorModel from "../../../../models/CallRecord";
 
@@ -23,55 +25,62 @@ export const ivrStep1 = (
 ) => {
   const twiml = new VoiceResponse();
   const gather = twiml.gather({
-    action: `/api/twillio/ivr/menu?callRecord=${callRecordId}`,
+    action: `https://moticosolutions.com/api/twillio/ivr/menu?callRecord=${callRecordId}`,
     numDigits: 1,
     method: "POST",
   });
   if (setting.greetingMessageStatus !== "DISABLED") {
     // handle the greeting stuff
     console.log("Transferring to greeting");
-    if (setting.greetingMessageStatus === "TEXT") {
-      console.log("Text",setting.greetingMessageInfo)
+    if (
+      setting.greetingMessageStatus === "TEXT" &&
+      setting.greetingMessageInfo
+    ) {
+      console.log("Text", setting.greetingMessageInfo);
       gather.say(setting.greetingMessageInfo);
       gather.pause({
-        length:1
-      })
-    } else {
-      gather.play(
-        `https://api.twilio.com/cowbell.mp3`
-      );
+        length: 1,
+      });
+    } else if (setting.greetingMessageStatus === "AUDIO") {
+      gather.play(`https://api.twilio.com/cowbell.mp3`);
     }
   }
   if (setting.ivrStatus === "TEXT") {
     gather.say(setting.ivrInfo);
     gather.pause({
-      length:1
-    })
+      length: 1,
+    });
   }
   if (setting.ivrStatus === "AUDIO") {
     gather.play(`https://api.twilio.com/cowbell.mp3`);
   }
   // Check the ivr data and do accordingly
-  if(setting.ivrData){
-    const parsedData:{ phoneNumberId: string; label: string }[] = JSON.parse(setting.ivrData);
+  if (setting.ivrData) {
+    const parsedData: { phoneNumberId: string; label: string }[] = JSON.parse(
+      setting.ivrData
+    );
     parsedData.forEach((ivr, index) => {
-      gather.say(`Press ${index+1} to connect to ${ivr.label}`);
+      gather.say(`Press ${index + 1} to connect to ${ivr.label}`);
       gather.pause({
-        length:0.5
-      })
-
-    })
+        length: 0.5,
+      });
+    });
   }
 
   return twiml.toString();
 };
 
-export const ivrStep2 = async (callRecordId: string, digit: string | number) => {
-  const to = (await CallRecorModel.findById(callRecordId).exec()).to
+export const ivrStep2 = async (
+  callRecordId: string,
+  digit: string | number
+) => {
+  const to = (await CallRecorModel.findById(callRecordId).exec()).to;
   const settings = await NumberSetting.findOne({
-    number:to
+    number: to,
   }).exec();
-  const parsedData:{ phoneNumberId: string; label: string }[] = JSON.parse(settings.ivrData);
+  const parsedData: { phoneNumberId: string; label: string }[] = JSON.parse(
+    settings.ivrData
+  );
   const numberDigit = Number(digit);
   return parsedData[numberDigit]
     ? forwardCallTo(parsedData[numberDigit].phoneNumberId)

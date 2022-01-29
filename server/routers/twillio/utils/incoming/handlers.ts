@@ -29,6 +29,8 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
     phoneNumber: phoneNumber._id,
   });
 
+  console.log("Setting", setting);
+
   if (!setting) {
     console.log("Settings not created for", phoneNumber.number);
     return res.status(500).send("ERR");
@@ -43,7 +45,7 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
   };
   // Start a Call Record and Return the ID;
   const callRecord = await CallRecordModel.create(callRecordDetails);
-
+  res.type("text/xml");
   // Number 1. IVR
   if (setting.ivrStatus !== "DISABLED") {
     // DO IVR WAITING STUFF
