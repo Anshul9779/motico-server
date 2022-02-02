@@ -5,6 +5,7 @@ import VoiceResponse from "twilio/lib/twiml/VoiceResponse";
 import { forwardCallTo } from "./department";
 import { terminateCall } from "./utils";
 import CallRecorModel from "../../../../models/CallRecord";
+import logger from "../../../../logger";
 
 /**
  *
@@ -31,12 +32,20 @@ export const ivrStep1 = (
   });
   if (setting.greetingMessageStatus !== "DISABLED") {
     // handle the greeting stuff
-    console.log("Transferring to greeting");
+    logger.log("info", {
+      timestamp: new Date().toISOString(),
+      function: "routers.twillio.utils.incoming.ivr.ivrStep1",
+      message: "Transferring to greeting",
+    });
     if (
       setting.greetingMessageStatus === "TEXT" &&
       setting.greetingMessageInfo
     ) {
-      console.log("Text", setting.greetingMessageInfo);
+      logger.log("info", {
+        timestamp: new Date().toISOString(),
+        function: "routers.twillio.utils.incoming.ivr.ivrStep1",
+        message: "Text " + setting.greetingMessageInfo,
+      });
       gather.say(setting.greetingMessageInfo);
       gather.pause({
         length: 1,

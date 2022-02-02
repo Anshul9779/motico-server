@@ -1,5 +1,6 @@
 import S3 from "aws-sdk/clients/s3";
 import fs from "fs";
+import logger from "../../logger";
 
 const bucketName: string = process.env.AWS_BUCKET_NAME;
 const region = process.env.AWS_BUCKET_REGION;
@@ -25,7 +26,11 @@ export const awsKeyExists = async (key: string) => {
         if (err.code === "NotFound") {
           return false;
         }
-        console.log("[aws] key check error", err);
+        logger.log("error", {
+          timestamp: new Date().toISOString(),
+          function: "routers.aws.utils.awsKeyExists",
+          error: err,
+        });
         return false;
       }
     );

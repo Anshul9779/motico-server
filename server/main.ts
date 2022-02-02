@@ -1,5 +1,5 @@
 import "./env";
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import bodyParser from "body-parser";
@@ -33,6 +33,9 @@ import {
 } from "./routes/users";
 import migrations from "./migrations";
 import { init } from "./sockets";
+import logger from "./logger";
+import fs from "fs";
+import { INTERNAL_SERVER_ERROR } from "./errors";
 
 //Set up default mongoose connection
 const mongoDB = "mongodb://127.0.0.1:27017/twillio";
@@ -84,6 +87,30 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use("/static", express.static(path.join(__dirname, "build", "static")));
+
+app.use("/api", (req: Request, res: Response, next: NextFunction) => {
+  logger.verbose({
+    timestamp: new Date().toISOString(),
+    url: `[${req.method.toUpperCase()}] ${req.originalUrl}`,
+    body: req.body,
+  });
+  try {
+    next();
+  } catch (error) {
+    logger.verbose({
+      url: `[${req.method.toUpperCase()}] ${req.originalUrl}`,
+      timestamp: new Date().toISOString(),
+      error,
+    });
+    return res.json(INTERNAL_SERVER_ERROR);
+  }
+});
+
+app.get("/api/log/:name", (req, res) => {
+  const name = req.params.name;
+  return fs.createReadStream(`./__logs__/${name}.log`).pipe(res);
+});
+
 /**
  *  AUTH BASED APIS
  *

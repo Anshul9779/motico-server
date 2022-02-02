@@ -7,12 +7,12 @@ import {
   INCOMPLETE_DATA,
 } from "./../../errors";
 import { awsKeyExists } from "../../routers/aws/utils";
+import logger from "../../logger";
 
 export const callDuration = async (
   req: AuthenticatedRequest,
   res: Response
 ) => {
-  console.log("Called");
   const inbound = await CallRecordModel.find({
     company: req.user.companyId,
     type: "INCOMING",
@@ -58,7 +58,6 @@ export const callDuration = async (
       },
     }).exec()
   ).reduce((prev, curr) => {
-    console.log(curr._id);
     return prev + curr.duration;
   }, 0);
 
@@ -73,7 +72,6 @@ export const callDuration = async (
       },
     }).exec()
   ).reduce((prev, curr) => {
-    console.log(curr._id);
     return prev + curr.duration;
   }, 0);
 
@@ -92,7 +90,6 @@ export const callDuration = async (
       },
     }).exec()
   ).reduce((prev, curr) => {
-    console.log(curr._id);
     return prev + curr.duration;
   }, 0);
 
@@ -287,7 +284,6 @@ export const getCallRecordFromId = async (
     return res.json(INCOMPLETE_DATA);
   }
   const data = await CallRecordModel.findById(id).populate("user").exec();
-  console.log({ data });
   return res.status(200).json({
     id: data._id,
     callSid: data.callSid,
@@ -334,7 +330,11 @@ export const getCallRecordings = async (
       try {
         exists = await awsKeyExists(recordingPath);
       } catch (err) {
-        console.log("[aws] ", err);
+        logger.log("error", {
+          timestamp: new Date().toISOString(),
+          function: "routers.call.handler.getCallRecordings.data.map.callback",
+          error: err,
+        });
       }
 
       return {

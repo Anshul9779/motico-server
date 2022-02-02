@@ -1,7 +1,12 @@
+import logger from "../logger";
 import PhoneNumberSetting from "./PhoneNumberSetting";
 
 const migrations = () => {
-  console.log("Runnning Migrations");
+  logger.log("info", {
+    timestamp: new Date().toISOString(),
+    function: "migrations",
+    message: "Running Migrations",
+  });
   return PhoneNumberSetting();
 };
 

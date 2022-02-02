@@ -1,5 +1,6 @@
 // this migration will create new number settings for all the numbers not there.
 
+import logger from "../logger";
 import NumberSetting from "../models/NumberSettings";
 import PhoneNumber from "../models/PhoneNumber";
 
@@ -22,11 +23,19 @@ const migration = async () => {
           ivrStatus: "DISABLED",
           callQueing: true,
         });
-        console.log(`Created Number Settings for ${phoneNumber.number}`);
+        logger.log("info", {
+          timestamp: new Date().toISOString(),
+          function: "migrations.phonenumber.settings",
+          message: `Created Number Settings for ${phoneNumber.number}`,
+        });
       }
     })
   );
-  console.log("Completed Migration for PhoneNumber Settings");
+  logger.log("info", {
+    timestamp: new Date().toISOString(),
+    function: "migrations.phonenumber.settings",
+    message: "Completed Migration for PhoneNumber Settings",
+  });
 };
 
 export default migration;

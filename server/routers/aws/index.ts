@@ -3,6 +3,7 @@ import { authenticateToken } from "./../../routes/auth";
 import { getAWSFileStream } from "./utils";
 import multer from "multer";
 import { uploadAWS } from "./handler";
+import logger from "../../logger";
 
 const upload = multer({
   dest: "uploads/",
@@ -20,8 +21,12 @@ router.get("/*", (req, res) => {
     const readStream = getAWSFileStream(awsKey);
     readStream.pipe(res);
   } catch (err) {
-    console.log("Error while accessing", req.path);
-    console.log(err);
+    logger.log("error", {
+      timestamp: new Date().toISOString(),
+      function: "routers.aws.index.router.get.callback",
+      error: err,
+      extra: { path: req.path },
+    });
     return res.status(404);
   }
 });

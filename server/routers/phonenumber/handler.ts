@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from "./../../routes/auth";
 import PhoneNumber from "./../../models/PhoneNumber";
 import NumberSetting from "./../../models/NumberSettings";
 import UserModel from "./../../models/User";
+import logger from "../../logger";
 
 export const getRegisteredPhoneNumbers = async (
   req: AuthenticatedRequest,
@@ -126,7 +127,11 @@ export const updateNumberSetting = async (
     await NumberSetting.findOneAndUpdate({ _id: id }, req.body.setting).exec();
     return res.send("Updated");
   } catch (e) {
-    console.log("Error", e);
+    logger.log("error", {
+      timestamp: new Date().toISOString(),
+      function: "routers.phonenumber.handler.updateNumberSetting",
+      error: e,
+    });
     return res.status(500);
   }
 };

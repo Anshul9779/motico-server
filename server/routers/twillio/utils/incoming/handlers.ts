@@ -5,6 +5,7 @@ import CallRecordModel from "./../../../../models/CallRecord";
 import PhoneNumberModel from "./../../../../models/PhoneNumber";
 import VoiceResponse from "twilio/lib/twiml/VoiceResponse";
 import { ivrStep1 } from "./ivr";
+import logger from "../../../../logger";
 
 export const handleIncomingCall = async (req: Request, res: Response) => {
   /**
@@ -14,7 +15,11 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
    * 2. Agent available or dial tone ?
    * 3. Connecting to Agent, Greeting Music
    */
-  console.log("Incoming", req.body);
+  logger.log("info", {
+    timestamp: new Date().toISOString(),
+    function: "routers.twillio.utils.incoming.handlers.handleIncomingCall",
+    message: req.body,
+  });
   if (!req.body) {
     return "ERR";
   }
@@ -28,11 +33,18 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
   const setting = await NumberSetting.findOne({
     phoneNumber: phoneNumber._id,
   });
-
-  console.log("Setting", setting);
+  logger.log("info", {
+    timestamp: new Date().toISOString(),
+    function: "routers.twillio.utils.incoming.handlers.handleIncomingCall",
+    message: setting,
+  });
 
   if (!setting) {
-    console.log("Settings not created for", phoneNumber.number);
+    logger.log("info", {
+      timestamp: new Date().toISOString(),
+      function: "routers.twillio.utils.incoming.handlers.handleIncomingCall",
+      message: "Settings not created for " + phoneNumber.number,
+    });
     return res.status(500).send("ERR");
   }
   const callRecordDetails = {
@@ -49,7 +61,11 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
   // Number 1. IVR
   if (setting.ivrStatus !== "DISABLED") {
     // DO IVR WAITING STUFF
-    console.log("Transfering to IVR");
+    logger.log("info", {
+      timestamp: new Date().toISOString(),
+      function: "routers.twillio.utils.incoming.handlers.handleIncomingCall",
+      message: "Transferring to IVR",
+    });
     return res.send(ivrStep1(callRecord._id, setting));
   }
   const twiml = new VoiceResponse();
@@ -59,7 +75,11 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
 
   if (setting.greetingMessageStatus !== "DISABLED") {
     // handle the greeting stuff
-    console.log("Transferring to greeting");
+    logger.log("info", {
+      timestamp: new Date().toISOString(),
+      function: "routers.twillio.utils.incoming.handlers.handleIncomingCall",
+      message: "Transferring to grerting",
+    });
     if (setting.greetingMessageStatus === "TEXT") {
       twiml.say(setting.greetingMessageInfo);
     } else {
@@ -98,7 +118,11 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
 };
 
 export const handleVoiceMailAction = async (req: Request, res: Response) => {
-  console.log("Voicemail response", req.body);
+  logger.log("info", {
+    timestamp: new Date().toISOString(),
+    function: "routers.twillio.utils.incoming.handlers.handleVoiceMailAction",
+    message: req.body,
+  });
   const callRecordId = req.params.id;
   const voicemailURL = req.body.RecordingUrl;
   const recordingStatus = req.body.RecordingStatus as "completed" | "failed";

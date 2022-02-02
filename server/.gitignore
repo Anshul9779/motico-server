@@ -13,3 +13,4 @@ yarn-error.log*
 
 ngrok.exe
 .env
+*.log
