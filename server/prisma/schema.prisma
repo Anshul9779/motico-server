@@ -82,8 +82,8 @@ model PhoneNumber {
   twillioId String
   userIds Int[]
   users User[] @relation(fields: [userIds], references: [id])
-  teamId Int
-  team Team @relation(fields: [teamId], references: [id])
+  teamId Int?
+  team Team? @relation(fields: [teamId], references: [id])
   settings PhoneNumberSettings?
   logs Call[]
   available Boolean @default(true)

@@ -4,16 +4,16 @@ import {
   addNumber,
   assignPhoneNumber,
   getNumberSettings,
-  getRegisteredPhoneNumbers,
+  getCompanyPhoneNumbers,
   updateNumberSetting,
 } from "./handler";
 
 const router = Router();
 
-router.get("/registered", isAdmin, getRegisteredPhoneNumbers);
-router.post("/new", isAdmin, addNumber);
-router.post("/assign", isAdmin, assignPhoneNumber);
-router.post("/settings", authenticateToken, getNumberSettings);
-router.put("/settings", authenticateToken, updateNumberSetting);
+router.get("/:id/settings", authenticateToken, getNumberSettings);
+router.put("/:id/settings", authenticateToken, updateNumberSetting);
+router.post("/:id/assign", isAdmin, assignPhoneNumber);
+router.get("/", isAdmin, getCompanyPhoneNumbers);
+router.post("/", isAdmin, addNumber);
 
 export default router;

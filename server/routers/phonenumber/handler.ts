@@ -1,9 +1,7 @@
 import { INCOMPLETE_DATA, INTERNAL_SERVER_ERROR } from "./../../errors";
 import { Response } from "express";
 import { AuthenticatedRequest } from "./../../routes/auth";
-import PhoneNumber from "./../../models/PhoneNumber";
 import NumberSetting from "./../../models/NumberSettings";
-import UserModel from "./../../models/User";
 import logger from "../../logger";
 import { AuthenticatedTypedRequest } from "../../types";
 import {
@@ -12,75 +10,69 @@ import {
   AssignPhoneNumberFnUser,
   assignPhonenumberGeneric,
 } from "../../utils/phonenumber";
+import prisma from "../../prisma";
+import { Prisma } from "@prisma/client";
 
-export const getRegisteredPhoneNumbers = async (
-  req: AuthenticatedRequest,
+export const getCompanyPhoneNumbers = async (
+  req: AuthenticatedTypedRequest,
   res: Response
 ) => {
   try {
-    const companyId = req.user.companyId;
-    const phoneNumbers = await PhoneNumber.find({ company: companyId }).exec();
-    res.status(200).json(phoneNumbers);
+    const { companyId } = req.user;
+    const phoneNumbers = await prisma.phoneNumber.findMany({
+      where: {
+        companyId,
+      },
+      include: {
+        settings: true,
+      },
+    });
+    return res.json(phoneNumbers);
   } catch (error) {
     console.error(error);
     res.status(500).json(INTERNAL_SERVER_ERROR);
   }
 };
 
-export const addNumber = async (req: AuthenticatedRequest, res: Response) => {
+export const addNumber = async (
+  req: AuthenticatedTypedRequest<
+    Omit<Prisma.PhoneNumberCreateInput, "purchasedOn" | "">
+  >,
+  res: Response
+) => {
   try {
-    const { name, cost, company, twillioId, number, country, area } = req.body;
-    if (!(name && cost && company && twillioId && number && country && area)) {
+    const { name, cost, twillioId, number, country, area } = req.body;
+    if (!(name && cost && twillioId && number && country && area)) {
       return res.status(400).json(INCOMPLETE_DATA);
     } else {
-      const phoneNumber = await PhoneNumber.create({
-        name,
-        cost,
-        company,
-        purchasedOn: new Date().getTime(),
-        twillioId,
-        assignedTo: [],
-        number,
-        country,
-        area,
-        isRecording: false,
-        voiceMail: false,
-        available: true,
-      });
-      // After creating the number, create the settings also
-      await NumberSetting.create({
-        phoneNumber: phoneNumber._id,
-        canRecord: false,
-        canPause: false,
-        documentStatus: "VERIFIED",
-        greetingMessageStatus: "DISABLED",
-        voiceMailStatus: "DISABLED",
-        ivrStatus: "DISABLED",
-        callQueing: true,
+      const { companyId } = req.user;
+      const phoneNumber = await prisma.phoneNumber.create({
+        data: {
+          ...req.body,
+          purchasedOn: new Date(),
+          company: {
+            connect: {
+              id: companyId,
+            },
+          },
+          settings: {
+            create: {
+              documentStatus: "VERIFIED",
+              greetingMsgStatus: "DISABLED",
+              ivrData: {},
+              voicemailStatus: "DISABLED",
+            },
+          },
+        },
+        include: {
+          settings: true,
+        },
       });
       res.status(201).json(phoneNumber);
     }
   } catch (error) {
     console.error(error);
     res.status(500).json(INTERNAL_SERVER_ERROR);
-  }
-};
-/**
- * Request Body should be
- * {
- *    audioKey : s3 bucket key
- *    text : string
- * }
- */
-
-export const addGreetingMessage = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
-  const { text, audioKey } = req.body;
-
-  if (!text || !audioKey) {
-    return res.json(INCOMPLETE_DATA);
   }
 };
 
@@ -91,6 +83,9 @@ export const assignPhoneNumber = async (
   >,
   res: Response
 ) => {
+  return res.json({
+    message: "API NOT IMPLEMENTED",
+  });
   try {
     if (!req.body.type) {
       return res.json({
@@ -109,26 +104,37 @@ export const assignPhoneNumber = async (
 };
 
 export const getNumberSettings = async (
-  req: AuthenticatedRequest,
+  req: AuthenticatedTypedRequest<{}, {}, { id: string }>,
   res: Response
 ) => {
-  const number = req.body.number;
-  const setting = await (
-    await NumberSetting.findOne({ phoneNumber: number })
-  )
-    // @ts-ignore
-    .execPopulate("phoneNumber");
-  return res.send(setting);
+  const id = parseInt(req.params.id, 10);
+
+  const settings = await prisma.phoneNumberSettings.findUnique({
+    where: { id },
+  });
+
+  return res.json(settings);
 };
 
 export const updateNumberSetting = async (
-  req: AuthenticatedRequest,
+  req: AuthenticatedTypedRequest<
+    Prisma.PhoneNumberSettingsUpdateInput,
+    {},
+    { id: string }
+  >,
   res: Response
 ) => {
   try {
-    const id = req.body.setting._id;
-    await NumberSetting.findOneAndUpdate({ _id: id }, req.body.setting).exec();
-    return res.send("Updated");
+    const id = parseInt(req.params.id, 10);
+
+    const updatedSettings = await prisma.phoneNumberSettings.update({
+      where: {
+        phoneNumberId: id,
+      },
+      data: req.body,
+    });
+
+    return res.json(updatedSettings);
   } catch (e) {
     logger.log("error", {
       timestamp: new Date().toISOString(),
