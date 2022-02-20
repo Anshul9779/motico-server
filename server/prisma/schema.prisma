@@ -16,6 +16,7 @@ model Company {
   name String
   details String?
   users User[]
+  teams Team[]
   phoneNumbers PhoneNumber[]
   createdAt DateTime @default(now())
 
@@ -62,6 +63,8 @@ model Team {
   name String
   phoneNumber PhoneNumber?
   users User[]
+  companyId Int
+  company Company @relation(fields: [companyId], references: [id])
   callType TeamCallType
   createdAt DateTime @default(now())
 }

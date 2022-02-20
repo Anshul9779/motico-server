@@ -1,48 +1,87 @@
-import { AuthenticatedRequest } from "./../../routes/auth";
 import { Response } from "express";
-import { INCOMPLETE_DATA } from "./../../errors";
-import TeamModel from "./../../models/Team";
+import { INCOMPLETE_DATA, INTERNAL_SERVER_ERROR } from "./../../errors";
+import { AuthenticatedTypedRequest } from "../../types";
+import { Prisma } from "@prisma/client";
+import prisma from "../../prisma";
 
-export const createTeam = async (req: AuthenticatedRequest, res: Response) => {
-  const payload = req.body;
-  if (!payload.name) {
-    return res.sendStatus(400).json(INCOMPLETE_DATA);
+export const createTeam = async (
+  req: AuthenticatedTypedRequest<
+    Prisma.TeamCreateInput & {
+      userIds?: number[];
+    }
+  >,
+  res: Response
+) => {
+  try {
+    const payload = req.body;
+    if (!payload.name) {
+      return res.sendStatus(400).json(INCOMPLETE_DATA);
+    }
+    const { callType, name, userIds } = req.body;
+    const { companyId } = req.user;
+
+    const team = await prisma.team.create({
+      data: {
+        name,
+        callType,
+        users: {
+          connect: userIds?.map((id) => ({ id })) ?? [],
+        },
+        company: {
+          connect: {
+            id: companyId,
+          },
+        },
+      },
+    });
+    return res.json({
+      ...team,
+    });
+  } catch (error) {
+    console.log(`routers.teams.createTeam ${error}`);
+    return res.status(500).json(INTERNAL_SERVER_ERROR);
   }
-  const name = payload.name;
-  const cascading = payload.cascading;
-  const userIds: string[] = payload.userIds;
-
-  const newTeam = await TeamModel.create({
-    name,
-    cascading,
-    company: req.user.companyId,
-    users: userIds,
-  });
-  return res.sendStatus(201).json({
-    id: newTeam._id,
-    name: newTeam.name,
-  });
 };
 
-export const deleteTeam = async (req: AuthenticatedRequest, res: Response) => {
-  const payload = req.body;
-  if (!payload.teamId) {
+export const deleteTeam = async (
+  req: AuthenticatedTypedRequest<{ id: number }>,
+  res: Response
+) => {
+  const { id } = req.body;
+  if (!id) {
     res.sendStatus(400).json(INCOMPLETE_DATA);
   }
-  await TeamModel.findByIdAndDelete(payload.teamId).exec();
+  await prisma.team.delete({
+    where: { id },
+  });
   res.sendStatus(200).send("Deleted");
 };
 
-export const getTeams = async (req: AuthenticatedRequest, res: Response) => {
-  const company = req.user.companyId;
-  const teams = await TeamModel.find({ company }).exec();
-  return res.json(
-    teams.map((team) => {
-      return {
-        id: team["_id"],
-        name: team["name"],
-        numUsers: team["users"].length,
-      };
-    })
-  );
+export const getTeams = async (
+  req: AuthenticatedTypedRequest,
+  res: Response
+) => {
+  const {
+    user: { companyId },
+  } = req;
+
+  const teams = await prisma.team.findMany({
+    where: {
+      companyId,
+    },
+  });
+
+  return res.json(teams);
+};
+
+export const getTeam = async (
+  req: AuthenticatedTypedRequest<{}, {}, { id: string }>,
+  res: Response
+) => {
+  const team = await prisma.team.findUnique({
+    where: {
+      id: parseInt(req.params.id, 10),
+    },
+  });
+  return res.json(team);
 };

@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { ROLES } from "../constants";
 import { FORBIDDEN, TOKEN_ERROR, UNAUTHORIZED } from "../errors";
 import { TokenUser } from "../models/User";
-import { AuthenticatedTypedRequest } from "../types";
+import { AuthenticatedTypedRequest, SafeUser } from "../types";
 
 const SECRET_TOKEN =
   process.env.SECRET_TOKEN || "randomstring_KLNL kn lk091830 knl";
@@ -30,7 +30,7 @@ export const authenticateToken = (
   const token = authHeader && authHeader.split(" ")[1];
 
   if (token == null) return res.status(401).json(UNAUTHORIZED);
-  jwt.verify(token, SECRET_TOKEN, (err, user: TokenUser) => {
+  jwt.verify(token, SECRET_TOKEN, (err, user: SafeUser) => {
     if (err) {
       console.error(err);
       res.status(401).json(TOKEN_ERROR);
@@ -49,7 +49,7 @@ export const isAdmin = (
   const token = authHeader && authHeader.split(" ")[1];
 
   if (token == null) return res.status(401).json(UNAUTHORIZED);
-  jwt.verify(token, SECRET_TOKEN, (err, user: TokenUser) => {
+  jwt.verify(token, SECRET_TOKEN, (err, user: SafeUser) => {
     if (err) {
       console.error(err);
       res.status(401).json(TOKEN_ERROR);

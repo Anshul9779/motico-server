@@ -8,17 +8,16 @@ export interface AuthenticatedRequest extends Request {
 
 export type TypedRequest<
   ReqBody = Record<string, unknown>,
-  QueryString = Record<string, unknown>
-> = Request<
-  Record<string, unknown>,
-  Record<string, unknown>,
-  ReqBody,
-  QueryString
->;
+  QueryString = Record<string, unknown>,
+  Params extends Record<string, string> = {}
+> = Request<Params, Record<string, unknown>, ReqBody, QueryString>;
 
-export interface AuthenticatedTypedRequest<ReqBody, QueryString>
-  extends TypedRequest<ReqBody, QueryString> {
-  user: TokenUser;
+export interface AuthenticatedTypedRequest<
+  ReqBody = {},
+  QueryString = {},
+  Params extends Record<string, string> = {}
+> extends TypedRequest<ReqBody, QueryString, Params> {
+  user: SafeUser;
 }
 
 export type SafeUser = Omit<User, "password"> & { validTime: number };
