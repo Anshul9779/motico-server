@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authenticateToken } from "./../../../../routes/auth";
 import twilio from "twilio";
+import { authenticateToken } from "../../../../utils/auth";
 import {
   confConnect,
   endCallInDb,

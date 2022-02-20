@@ -1,6 +1,6 @@
 import express from "express";
+import { isAdmin } from "../../utils/auth";
 import { createTeam, deleteTeam, getTeams } from "./handler";
-import { isAdmin } from "./../../routes/auth";
 
 // Handles all /api/teams routes
 

@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authenticateToken, isAdmin } from "./../../routes/auth";
 import twilio from "twilio";
+import { authenticateToken, isAdmin } from "../../utils/auth";
 import incomingRouter from "./utils/incoming";
 import outgoingRouter from "./utils/outgoing";
 import {

@@ -1,9 +1,9 @@
 import express from "express";
-import { authenticateToken } from "./../../routes/auth";
 import { getAWSFileStream } from "./utils";
 import multer from "multer";
 import { uploadAWS } from "./handler";
 import logger from "../../logger";
+import { authenticateToken } from "../../utils/auth";
 
 const upload = multer({
   dest: "uploads/",

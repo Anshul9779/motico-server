@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticateToken } from "./../../routes/auth";
+import { authenticateToken } from "../../utils/auth";
 import {
   callDuration,
   callRecordTime,

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticateToken, isAdmin } from "./../../routes/auth";
+import { authenticateToken, isAdmin } from "../../utils/auth";
 import {
   addNumber,
   assignPhoneNumber,

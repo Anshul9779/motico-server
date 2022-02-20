@@ -10,6 +10,17 @@ const SECRET_TOKEN =
 
 const SALT_ROUNDS = 10;
 
+export const verifyJWTToken = (token: string): Promise<TokenUser> => {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, SECRET_TOKEN, (err, user: TokenUser) => {
+      if (err) {
+        reject(err);
+      }
+      resolve(user);
+    });
+  });
+};
+
 export const authenticateToken = (
   req: AuthenticatedTypedRequest<any, any>,
   res: Response,

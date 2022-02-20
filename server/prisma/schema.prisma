@@ -29,6 +29,8 @@ model User {
   roles String[]
   email String @unique()
   password String
+  teamId Int?
+  team Team? @relation(fields: [teamId], references: [id])
   companyId Int
   company Company @relation(fields: [companyId], references: [id])
   settings UserSettings @relation(fields: [settingsId], references: [id])
@@ -49,10 +51,18 @@ model UserSettings {
   createdAt DateTime @default(now())
 }
 
+enum TeamCallType { 
+  SIMULTANEOUSLY
+  FIRST_ORDER
+  ROUND_ROBIN
+}
+
 model Team {
   id Int    @id @default(autoincrement())
   name String
   phoneNumber PhoneNumber?
+  users User[]
+  callType TeamCallType
   createdAt DateTime @default(now())
 }
 
