@@ -27,7 +27,7 @@ model User {
   lastName String?
   personalNumber String?
   roles String[]
-  email String
+  email String @unique()
   password String
   companyId Int
   company Company @relation(fields: [companyId], references: [id])

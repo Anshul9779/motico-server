@@ -6,19 +6,13 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import { connect, connection } from "mongoose";
 import migration from "./migrations";
+import authRouter from "./routers/auth";
 import awsRouter from "./routers/aws";
 import phonenumberRouter from "./routers/phonenumber";
 import teamsRouter from "./routers/teams";
 import callRouter from "./routers/call";
 import twillioRouter from "./routers/twillio";
-import {
-  authenticateToken,
-  isAdmin,
-  loginAPI,
-  signupAPI,
-  userInvite,
-  userPasswordReset,
-} from "./routes/auth";
+import { userInvite } from "./routes/auth";
 import path from "path";
 import {
   createCompnay,
@@ -36,6 +30,8 @@ import { init } from "./sockets";
 import logger from "./logger";
 import fs from "fs";
 import { INTERNAL_SERVER_ERROR } from "./errors";
+import prisma from "./prisma";
+import { authenticateToken, isAdmin } from "./utils/auth";
 
 //Set up default mongoose connection
 const mongoDB = "mongodb://127.0.0.1:27017/twillio";
@@ -117,11 +113,9 @@ app.get("/api/log/:name", (req, res) => {
  * This section contains apis for account management like Login Signup etc
  */
 
-app.post("/api/signup", signupAPI);
+app.use("/api/auth", authRouter);
 
-app.post("/api/login", loginAPI);
-
-app.post("/api/reset-password", userPasswordReset);
+// app.post("/api/reset-password", userPasswordReset);
 /**
  * USER CREATION ROUTES
  *
@@ -188,5 +182,5 @@ app.get("/*", function (req, res) {
 });
 
 server.listen(8080, () => {
-  console.log("Server running on 8080");
+  prisma.$connect().then(() => console.log("Server running on 8080"));
 });
