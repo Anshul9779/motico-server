@@ -5,6 +5,13 @@ import PhoneNumber from "./../../models/PhoneNumber";
 import NumberSetting from "./../../models/NumberSettings";
 import UserModel from "./../../models/User";
 import logger from "../../logger";
+import { AuthenticatedTypedRequest } from "../../types";
+import {
+  AssignPhoneNumberFnPN,
+  AssignPhoneNumberFnTeam,
+  AssignPhoneNumberFnUser,
+  assignPhonenumberGeneric,
+} from "../../utils/phonenumber";
 
 export const getRegisteredPhoneNumbers = async (
   req: AuthenticatedRequest,
@@ -78,24 +85,20 @@ export const addGreetingMessage = async (
 };
 
 export const assignPhoneNumber = async (
-  req: AuthenticatedRequest,
+  req: AuthenticatedTypedRequest<
+    AssignPhoneNumberFnUser | AssignPhoneNumberFnTeam | AssignPhoneNumberFnPN,
+    undefined
+  >,
   res: Response
 ) => {
   try {
-    const phoneNumberIds: string[] = req.body.phoneNumberIds;
-    const userId = req.body.userId;
-    await UserModel.findByIdAndUpdate(userId, {
-      phoneNumbers: phoneNumberIds,
-    }).exec();
-    await Promise.all(
-      phoneNumberIds.map(async (phoneId) => {
-        const phoneData = await PhoneNumber.findById(phoneId).exec();
-        if (!phoneData.assignedTo.includes(userId)) {
-          phoneData.assignedTo.push(userId);
-        }
-        await phoneData.save();
-      })
-    );
+    if (!req.body.type) {
+      return res.json({
+        ...INCOMPLETE_DATA,
+        message: "You are using old API, update",
+      });
+    }
+    await assignPhonenumberGeneric(req.body);
     return res.json({
       message: "OK",
     });

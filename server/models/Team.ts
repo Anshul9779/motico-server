@@ -20,9 +20,14 @@ const TeamSchema = new Schema({
     {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: false,
+      required: true,
     },
   ],
+  number: {
+    type: Schema.Types.ObjectId,
+    ref: "PhoneNumber",
+    required: true,
+  },
 });
 
 export interface TeamBase extends Document {

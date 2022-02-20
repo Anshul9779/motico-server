@@ -1,5 +1,6 @@
 import { Document, Model, model, Schema, Types } from "mongoose";
 import { Company } from "./Company";
+import { TeamBase } from "./Team";
 import { UserBase } from "./User";
 
 const phoneNumberSchema = new Schema({
@@ -30,6 +31,11 @@ const phoneNumberSchema = new Schema({
       required: false,
     },
   ],
+  team: {
+    type: Schema.Types.ObjectId,
+    ref: "Team",
+    required: false,
+  },
   number: {
     type: String,
     required: true,
@@ -63,6 +69,7 @@ export interface PhoneNumberBase extends Document, Record<string, unknown> {
   purchasedOn: number;
   twillioId: string;
   assignedTo: Types.ObjectId[] | Record<string, unknown>[];
+  team: Types.ObjectId | Record<string, unknown> | any;
   number: string;
   country: string;
   area: string;
@@ -74,11 +81,13 @@ export interface PhoneNumberBase extends Document, Record<string, unknown> {
 export interface PhoneNumberDocument extends PhoneNumberBase {
   company: Company["_id"];
   assignedTo: UserBase["_id"][];
+  team: TeamBase["_id"];
 }
 
 export interface PhoneNumberPopulated extends PhoneNumberBase {
   company: Company;
   assignedTo: UserBase[];
+  team: TeamBase;
 }
 
 const PhoneNumberModel = model<PhoneNumberDocument, Model<PhoneNumberDocument>>(
