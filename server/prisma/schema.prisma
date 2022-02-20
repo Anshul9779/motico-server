@@ -9,3 +9,129 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+
+model Company { 
+  id    Int    @id @default(autoincrement())
+  name String
+  details String?
+  users User[]
+  phoneNumbers PhoneNumber[]
+  createdAt DateTime @default(now())
+
+}
+
+model User {
+  id    Int    @id @default(autoincrement())
+  firstName String
+  lastName String?
+  personalNumber String?
+  roles String[]
+  email String
+  password String
+  companyId Int
+  company Company @relation(fields: [companyId], references: [id])
+  settings UserSettings @relation(fields: [settingsId], references: [id])
+  phoneNumbers PhoneNumber[]
+  settingsId Int
+  calls Call[]
+  createdAt DateTime @default(now())
+}
+
+model UserSettings {
+  id    Int    @id @default(autoincrement())
+  recieveUpdates Boolean @default(false)
+  missedCallAlert Boolean @default(false)
+  voicemailAlert Boolean @default(false)
+  showDashboard Boolean @default(false)
+  showDialler Boolean @default(false)
+  user User?
+  createdAt DateTime @default(now())
+}
+
+model Team {
+  id Int    @id @default(autoincrement())
+  name String
+  phoneNumber PhoneNumber?
+  createdAt DateTime @default(now())
+}
+
+model PhoneNumber { 
+  id Int    @id @default(autoincrement())
+  name String
+  cost Decimal
+  number String
+  country String
+  area String
+  companyId Int
+  company Company @relation(fields: [companyId], references: [id])
+  purchasedOn DateTime
+  twillioId String
+  userIds Int[]
+  users User[] @relation(fields: [userIds], references: [id])
+  teamId Int
+  team Team @relation(fields: [teamId], references: [id])
+  settings PhoneNumberSettings?
+  logs Call[]
+  available Boolean @default(true)
+}
+
+enum PhoneNumberDocumentStatus {
+  UPLOADED
+  VERIFIED
+  PENDING
+  NOT_UPLOADED
+}
+
+enum SettingsStatus {
+  DISABLED
+  TEXT
+  AUDIO
+}
+
+model PhoneNumberSettings {
+  id Int    @id @default(autoincrement())
+  phoneNumber PhoneNumber @relation(fields: [phoneNumberId], references: [id])
+  phoneNumberId Int
+  allowRecord Boolean @default(false)
+  allowPause Boolean @default(false)
+  documentStatus PhoneNumberDocumentStatus
+  greetingMsgStatus SettingsStatus
+  greetingMsgText String @default("")
+  greetingMsgAudio String @default("")
+  voicemailStatus SettingsStatus
+  voicemailText String @default("")
+  voicemailAudio String @default("")
+  ivrEnabled Boolean @default(false)
+  ivrMessage String @default("")
+  ivrDataTeamIds Int[]
+  ivrData Json
+}
+
+enum CallType {
+  INCOMING
+  OUTGOING
+  MISSED
+}
+
+enum CallStatus { 
+  ONGOING
+  ENDED
+  DROPPED
+}
+
+model Call {
+  id Int    @id @default(autoincrement())
+  fromId Int
+  from PhoneNumber @relation(fields: [fromId], references: [id])
+  to String
+  sid String @default("")
+  userId Int
+  user User @relation(fields: [userId], references: [id])
+  companyId Int
+  startedOn DateTime @default(now())
+  endedOn DateTime?
+  status CallStatus
+  type CallType
+  recordedURL String?
+}
