@@ -8,13 +8,13 @@ export interface AuthenticatedRequest extends Request {
 
 export type TypedRequest<
   ReqBody = Record<string, unknown>,
-  QueryString = Record<string, unknown>,
+  QueryString extends Record<string, string> = {},
   Params extends Record<string, string> = {}
 > = Request<Params, Record<string, unknown>, ReqBody, QueryString>;
 
 export interface AuthenticatedTypedRequest<
   ReqBody = {},
-  QueryString = {},
+  QueryString extends Record<string, string> = {},
   Params extends Record<string, string> = {}
 > extends TypedRequest<ReqBody, QueryString, Params> {
   user: SafeUser;
