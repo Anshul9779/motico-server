@@ -3,39 +3,50 @@ import {
   INCOMPLETE_DATA,
   INTERNAL_SERVER_ERROR,
 } from "./../../../../errors";
-import { Response, Request } from "express";
-import { AuthenticatedRequest } from "./../../../../routes/auth";
-import CallRecordModel from "./../../../../models/CallRecord";
+import { Response } from "express";
 import twilio from "twilio";
 import config from "./../../../../config";
 import VoiceResponse from "twilio/lib/twiml/VoiceResponse";
 import { getIO } from "../../../../sockets";
 import SOCKET from "../../../../sockets/channels";
+import { AuthenticatedTypedRequest, TypedRequest } from "../../../../types";
+import prisma from "../../../../prisma";
 
 const client = twilio(config.accountSid, config.authToken);
 
 export const getCallRecordID = async (
-  req: AuthenticatedRequest,
+  req: AuthenticatedTypedRequest<{
+    from: string;
+    to: string;
+  }>,
   res: Response
 ) => {
-  const payload = req.body;
-  if (!payload.from || !payload.to) {
+  const { from, to } = req.body;
+  if (!from || !to) {
     return res.status(400).json(INCOMPLETE_DATA);
   }
   try {
-    const callRecordDetails = {
-      from: payload.from,
-      to: payload.to,
-      user: req.user.id,
-      type: "OUTGOING",
-      isActive: true,
-      company: req.user.companyId,
-      callSid: "",
-    };
-    // Start a Call Record and Return the ID;
-    const callRecord = await CallRecordModel.create(callRecordDetails);
+    const { id: userId, companyId } = req.user;
+    const call = await prisma.call.create({
+      data: {
+        from: {
+          connect: {
+            number: from,
+          },
+        },
+        to,
+        type: "OUTGOING",
+        status: "ONGOING",
+        user: {
+          connect: {
+            id: userId,
+          },
+        },
+        companyId,
+      },
+    });
     return res.status(201).json({
-      callRecordID: callRecord._id,
+      callRecordID: call.id,
     });
   } catch (error) {
     console.error(error);
@@ -43,16 +54,24 @@ export const getCallRecordID = async (
   }
 };
 
-export const confConnect = async (req: Request, res: Response) => {
-  const callRecordID = req.params.sid;
+export const confConnect = async (
+  req: TypedRequest<
+    { SequenceNumber: string },
+    {},
+    { sid: string; phone: string; callerId: string }
+  >,
+  res: Response
+) => {
+  const { sid: callRecordID, phone, callerId } = req.params;
+  const { SequenceNumber: seqNum } = req.body;
+
   console.log("Conf HIT", req.params, req.body);
-  const seqNum = req.body.SequenceNumber;
   if (seqNum === "1") {
     await client
       .conferences("conf_" + callRecordID)
       .participants.create({
-        to: req.params.phone,
-        from: req.params.callerId,
+        to: phone,
+        from: callerId,
         earlyMedia: true,
         endConferenceOnExit: true,
       })
@@ -66,28 +85,44 @@ export const confConnect = async (req: Request, res: Response) => {
   }
 };
 
-export const outgoingStart = async (req: Request, res: Response) => {
-  console.log("Outgoing", req.body);
-  const phoneNumber = req.body.to;
-  const callerId = req.body.from;
-  const callRecordID = req.body.callRecordID;
-  const isAdmin = req.body.isAdmin;
-  const isIncoming = req.body.isIncoming;
+export const outgoingStart = async (
+  req: TypedRequest<{
+    to: string;
+    from: string;
+    isAdmin: "true" | "false";
+    callRecordID: number;
+    isIncoming: "true" | "false";
+    CallSid: string;
+  }>,
+  res: Response
+) => {
+  const {
+    to: phoneNumber,
+    from: callerId,
+    callRecordID,
+    isAdmin,
+    isIncoming,
+    CallSid,
+  } = req.body;
   // Here check if the ID is correct or not
-  const callRecord = await CallRecordModel.findOne({
-    _id: callRecordID,
-  }).exec();
-  if (!callRecord) {
+  const call = await prisma.call.findUnique({
+    where: { id: callRecordID },
+  });
+
+  if (!call) {
     res.send(400).json(DATA_INCORRECT);
   }
-  if (isAdmin === "false" || !callRecord.startTime) {
+  if (isAdmin === "false" || !call.startedOn) {
     // If ID is correct then mutate the data
-    await CallRecordModel.findOneAndUpdate(
-      { _id: callRecordID },
-      { startTime: new Date().getTime(), callSid: req.body.CallSid }
-    );
+    await prisma.call.update({
+      where: { id: callRecordID },
+      data: {
+        startedOn: new Date(),
+        sid: CallSid,
+      },
+    });
     const io = getIO();
-    io.to(`admin-${callRecord.company}`).emit(SOCKET.CALL_ADD, {
+    io.to(`admin-${call.companyId}`).emit(SOCKET.CALL_ADD, {
       id: callRecordID,
     });
   }
@@ -131,7 +166,7 @@ export const outgoingStart = async (req: Request, res: Response) => {
     return res.send(twiml.toString());
   } else {
     // Convert Existing call to conf call.
-    console.log("Call SID", callRecord.callSid);
+    console.log("Call SID", call.sid);
     // await client.calls(callRecord.callSid).update({
     //   url: `${NGROK_URL}/api/twillio/confTwiML?callId=${callRecordID}`,
     //   method: "GET",
@@ -146,23 +181,25 @@ export const outgoingStart = async (req: Request, res: Response) => {
   }
 };
 
-export const endCallInDb = async (req: AuthenticatedRequest, res: Response) => {
-  const callRecordID = req.body.callId as string;
+export const endCallInDb = async (
+  req: AuthenticatedTypedRequest<{ callId: number }>,
+  res: Response
+) => {
+  const { callId } = req.body;
   // Here check if the ID is correct or not
-  console.log("Ending the call", callRecordID);
-  const callRecord = await CallRecordModel.findOne({
-    _id: callRecordID,
-  }).exec();
-  if (!callRecord) {
-    return res.send(400).json(DATA_INCORRECT);
-  }
-  await CallRecordModel.findOneAndUpdate(
-    { _id: callRecordID },
-    { endTime: new Date().getTime(), isActive: false }
-  );
+  console.log("Ending the call", callId);
+  const call = await prisma.call.update({
+    where: {
+      id: callId,
+    },
+    data: {
+      endedOn: new Date(),
+      status: "ENDED",
+    },
+  });
   const io = getIO();
-  io.to(`admin-${callRecord.company}`).emit(SOCKET.CALL_END, {
-    id: callRecordID,
+  io.to(`admin-${call.companyId}`).emit(SOCKET.CALL_END, {
+    id: call.id,
   });
   return res.send({ message: "OK" });
 };

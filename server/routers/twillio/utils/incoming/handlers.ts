@@ -1,13 +1,15 @@
 // Handles the incoming call stuff
-import { Response, Request } from "express";
-import NumberSetting from "./../../../../models/NumberSettings";
-import CallRecordModel from "./../../../../models/CallRecord";
-import PhoneNumberModel from "./../../../../models/PhoneNumber";
+import { Response } from "express";
 import VoiceResponse from "twilio/lib/twiml/VoiceResponse";
 import { ivrStep1 } from "./ivr";
 import logger from "../../../../logger";
+import { TypedRequest } from "../../../../types";
+import prisma from "../../../../prisma";
 
-export const handleIncomingCall = async (req: Request, res: Response) => {
+export const handleIncomingCall = async (
+  req: TypedRequest<{ To: string; From: string }>,
+  res: Response
+) => {
   /**
    * for incoming call handle cases :
    *
@@ -23,23 +25,29 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
   if (!req.body) {
     return "ERR";
   }
-  const phoneNumber = await PhoneNumberModel.findOne({
-    number: (req.body as unknown as any).To,
-  }).exec();
+
+  const { To: to } = req.body;
+
+  const phoneNumber = await prisma.phoneNumber.findUnique({
+    where: {
+      number: to,
+    },
+    include: {
+      settings: true,
+    },
+  });
   if (!phoneNumber) {
     return res.send("ERR");
   }
 
-  const setting = await NumberSetting.findOne({
-    phoneNumber: phoneNumber._id,
-  });
+  const { settings } = phoneNumber;
   logger.log("info", {
     timestamp: new Date().toISOString(),
     function: "routers.twillio.utils.incoming.handlers.handleIncomingCall",
-    message: setting,
+    message: settings,
   });
 
-  if (!setting) {
+  if (!settings) {
     logger.log("info", {
       timestamp: new Date().toISOString(),
       function: "routers.twillio.utils.incoming.handlers.handleIncomingCall",
@@ -47,46 +55,53 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
     });
     return res.status(500).send("ERR");
   }
-  const callRecordDetails = {
-    from: (req.body as unknown as any).From,
-    to: (req.body as unknown as any).To,
-    type: "INCOMING",
-    isActive: true,
-    company: phoneNumber.company,
-    callSid: "",
-  };
+
   // Start a Call Record and Return the ID;
-  const callRecord = await CallRecordModel.create(callRecordDetails);
+  // const callRecord = await CallRecordModel.create(callRecordDetails);
+  const call = await prisma.call.create({
+    data: {
+      to,
+      type: "INCOMING",
+      status: "ONGOING",
+      from: {
+        connect: {
+          id: phoneNumber.id,
+        },
+      },
+      startedOn: new Date(),
+      companyId: phoneNumber.companyId,
+    },
+  });
   res.type("text/xml");
   // Number 1. IVR
-  if (setting.ivrStatus !== "DISABLED") {
+  if (settings.ivrEnabled) {
     // DO IVR WAITING STUFF
     logger.log("info", {
       timestamp: new Date().toISOString(),
       function: "routers.twillio.utils.incoming.handlers.handleIncomingCall",
       message: "Transferring to IVR",
     });
-    return res.send(ivrStep1(callRecord._id, setting));
+    return res.send(ivrStep1(call.id, settings));
   }
   const twiml = new VoiceResponse();
 
   // TODO: Check if it goes to voicemail ?
   // Check if agents are available?
 
-  if (setting.greetingMessageStatus !== "DISABLED") {
+  if (settings.greetingMsgStatus !== "DISABLED") {
     // handle the greeting stuff
     logger.log("info", {
       timestamp: new Date().toISOString(),
       function: "routers.twillio.utils.incoming.handlers.handleIncomingCall",
       message: "Transferring to grerting",
     });
-    if (setting.greetingMessageStatus === "TEXT") {
-      twiml.say(setting.greetingMessageInfo);
+    if (settings.greetingMsgStatus === "TEXT") {
+      twiml.say(settings.greetingMsgStatus);
     } else {
       twiml.play(`https://api.twilio.com/cowbell.mp3`);
     }
     const dial = twiml.dial();
-    dial.conference(`conf_${callRecord._id}`);
+    dial.conference(`conf_${call.id}`);
     return res.send(twiml.toString());
   }
 
@@ -97,8 +112,7 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
   // Use <Record> to record the caller's message
   twiml.record({
     recordingStatusCallback:
-      "https://motiocosolutions.com/api/twillio/incoming/voicemail/" +
-      callRecord._id,
+      "https://motiocosolutions.com/api/twillio/incoming/voicemail/" + call.id,
     recordingStatusCallbackMethod: "POST",
   });
 
@@ -113,26 +127,38 @@ export const handleIncomingCall = async (req: Request, res: Response) => {
   console.log("Default");
   twiml.say("Thank you for calling us. An agent will join in some time.");
   const dial = twiml.dial();
-  dial.conference(`conf_${callRecord._id}`);
+  dial.conference(`conf_${call.id}`);
   return res.send(twiml.toString());
 };
 
-export const handleVoiceMailAction = async (req: Request, res: Response) => {
+export const handleVoiceMailAction = async (
+  req: TypedRequest<
+    {
+      RecordingUrl: string;
+      RecordingStatus: "completed" | "failed";
+    },
+    {},
+    { id: string }
+  >,
+  res: Response
+) => {
   logger.log("info", {
     timestamp: new Date().toISOString(),
     function: "routers.twillio.utils.incoming.handlers.handleVoiceMailAction",
     message: req.body,
   });
-  const callRecordId = req.params.id;
+  const callId = req.params.id;
   const voicemailURL = req.body.RecordingUrl;
   const recordingStatus = req.body.RecordingStatus as "completed" | "failed";
 
-  await CallRecordModel.findOneAndUpdate(
-    { id: callRecordId },
-    {
-      voicemailURL: recordingStatus === "completed" ? voicemailURL : "",
-      endTime: new Date().getTime(),
-    }
-  );
+  await prisma.call.update({
+    where: {
+      id: parseInt(callId, 10),
+    },
+    data: {
+      recordedURL: recordingStatus === "completed" ? voicemailURL : "",
+      endedOn: new Date(),
+    },
+  });
   return res.send("OK");
 };

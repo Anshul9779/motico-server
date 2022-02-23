@@ -73,7 +73,7 @@ model PhoneNumber {
   id Int    @id @default(autoincrement())
   name String
   cost Decimal
-  number String
+  number String @unique()
   country String
   area String
   companyId Int
@@ -81,7 +81,7 @@ model PhoneNumber {
   purchasedOn DateTime
   twillioId String
   userIds Int[]
-  users User[] @relation(fields: [userIds], references: [id])
+  users User[]
   teamId Int?
   team Team? @relation(fields: [teamId], references: [id])
   settings PhoneNumberSettings?
@@ -139,8 +139,8 @@ model Call {
   from PhoneNumber @relation(fields: [fromId], references: [id])
   to String
   sid String @default("")
-  userId Int
-  user User @relation(fields: [userId], references: [id])
+  userId Int?
+  user User? @relation(fields: [userId], references: [id])
   companyId Int
   startedOn DateTime @default(now())
   endedOn DateTime?

@@ -1,7 +1,5 @@
 import { INCOMPLETE_DATA, INTERNAL_SERVER_ERROR } from "./../../errors";
 import { Response } from "express";
-import { AuthenticatedRequest } from "./../../routes/auth";
-import NumberSetting from "./../../models/NumberSettings";
 import logger from "../../logger";
 import { AuthenticatedTypedRequest } from "../../types";
 import {

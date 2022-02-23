@@ -4,16 +4,24 @@ import {
   INTERNAL_SERVER_ERROR,
 } from "./../../../errors";
 import { Response } from "express";
-import { AuthenticatedRequest } from "./../../../routes/auth";
 import twilio from "twilio";
 import config from "./../../../config";
-import PhoneNumberModel from "./../../../models/PhoneNumber";
+import { AuthenticatedTypedRequest } from "../../../types";
+import prisma from "../../../prisma";
 
 const { AccessToken } = twilio.jwt;
 const VoiceGrant = AccessToken.VoiceGrant;
 const client = twilio(config.accountSid, config.authToken);
 
-export const buyNumber = async (req: AuthenticatedRequest, res: Response) => {
+export const buyNumber = async (
+  req: AuthenticatedTypedRequest<{
+    phoneNumber: string;
+    name: string;
+    country: string;
+    area: string;
+  }>,
+  res: Response
+) => {
   try {
     const { phoneNumber, name, country, area } = req.body;
     if (!phoneNumber || !name || !country || !area) {
@@ -22,31 +30,41 @@ export const buyNumber = async (req: AuthenticatedRequest, res: Response) => {
 
     // TODO: Check if phone number only contains numbers and plus sign
 
-    const companyId = req.user.companyId;
+    const { companyId } = req.user;
 
     // First register number on Twillio
     const incomingPhoneNumber = await client.incomingPhoneNumbers.create({
       phoneNumber,
     });
-    // Create a new Phone Number;
-    const companyPhoneNumber = await PhoneNumberModel.create({
-      name,
-      cost: 1,
-      company: companyId,
-      purchasedOn: new Date().getTime(),
-      twillioId: incomingPhoneNumber.sid,
-      assignedTo: [],
-      number: phoneNumber,
-      country,
-      area,
-      isRecording: false,
-      voiceMail: false,
-      available: true,
-    });
 
+    // Create a new Phone Number;
+    const companyPhonenumber = await prisma.phoneNumber.create({
+      data: {
+        name,
+        cost: 1,
+        country,
+        area,
+        number: phoneNumber,
+        purchasedOn: new Date(),
+        twillioId: incomingPhoneNumber.sid,
+        company: {
+          connect: {
+            id: companyId,
+          },
+        },
+        settings: {
+          create: {
+            documentStatus: "VERIFIED",
+            greetingMsgStatus: "DISABLED",
+            ivrData: {},
+            voicemailStatus: "DISABLED",
+          },
+        },
+      },
+    });
     // Return the phone number instance
 
-    res.status(201).json(companyPhoneNumber);
+    res.status(201).json(companyPhonenumber);
   } catch (error) {
     console.error(error);
     res.status(500).json(INTERNAL_SERVER_ERROR);
@@ -54,7 +72,12 @@ export const buyNumber = async (req: AuthenticatedRequest, res: Response) => {
 };
 
 export const getAvailablePhoneNumbers = async (
-  req: AuthenticatedRequest,
+  req: AuthenticatedTypedRequest<{
+    country: string;
+    type: "LOCAL" | "TOLLFREE" | "MOBILE";
+    areaCode: number;
+    region: string;
+  }>,
   res: Response
 ) => {
   try {
@@ -67,8 +90,8 @@ export const getAvailablePhoneNumbers = async (
       return res.status(400).json(DATA_INCORRECT);
     }
     // depending on the type fetch accordingly
-    const areaCode = req.body.areaCode;
-    const region = req.body.region;
+    const { areaCode, region } = req.body;
+
     if (type === "LOCAL") {
       try {
         const numbers = await client
@@ -108,7 +131,7 @@ export const getAvailablePhoneNumbers = async (
   }
 };
 
-export const twillioToken = (req: AuthenticatedRequest, res: Response) => {
+export const twillioToken = (req: AuthenticatedTypedRequest, res: Response) => {
   try {
     const accessToken = new AccessToken(
       config.accountSid,
