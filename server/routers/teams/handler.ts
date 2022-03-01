@@ -8,6 +8,7 @@ export const createTeam = async (
   req: AuthenticatedTypedRequest<
     Prisma.TeamCreateInput & {
       userIds?: number[];
+      phonenumber?: number;
     }
   >,
   res: Response
@@ -17,8 +18,10 @@ export const createTeam = async (
     if (!payload.name) {
       return res.sendStatus(400).json(INCOMPLETE_DATA);
     }
-    const { callType, name, userIds } = req.body;
+    const { callType, name, userIds, phonenumber } = req.body;
     const { companyId } = req.user;
+
+    const hasNumber = Boolean(phonenumber);
 
     const team = await prisma.team.create({
       data: {
@@ -27,6 +30,13 @@ export const createTeam = async (
         users: {
           connect: userIds?.map((id) => ({ id })) ?? [],
         },
+        phoneNumber: hasNumber
+          ? {
+              connect: {
+                id: phonenumber,
+              },
+            }
+          : {},
         company: {
           connect: {
             id: companyId,
@@ -54,7 +64,7 @@ export const deleteTeam = async (
   await prisma.team.delete({
     where: { id },
   });
-  res.sendStatus(200).send("Deleted");
+  return res.sendStatus(200).send("Deleted");
 };
 
 export const getTeams = async (
@@ -68,6 +78,9 @@ export const getTeams = async (
   const teams = await prisma.team.findMany({
     where: {
       companyId,
+    },
+    include: {
+      users: true,
     },
   });
 

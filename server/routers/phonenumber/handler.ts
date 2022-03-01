@@ -23,6 +23,7 @@ export const getCompanyPhoneNumbers = async (
       },
       include: {
         settings: true,
+        users: true,
       },
     });
     return res.json(phoneNumbers);
@@ -109,6 +110,9 @@ export const getNumberSettings = async (
 
   const settings = await prisma.phoneNumberSettings.findUnique({
     where: { id },
+    include: {
+      phoneNumber: true,
+    },
   });
 
   return res.json(settings);

@@ -3,10 +3,8 @@ import jwt from "jsonwebtoken";
 import { ROLES } from "../constants";
 import { FORBIDDEN, TOKEN_ERROR, UNAUTHORIZED } from "../errors";
 import { TokenUser } from "../models/User";
+import { SECRET_TOKEN } from "../routers/auth/utils";
 import { AuthenticatedTypedRequest, SafeUser } from "../types";
-
-const SECRET_TOKEN =
-  process.env.SECRET_TOKEN || "randomstring_KLNL kn lk091830 knl";
 
 const SALT_ROUNDS = 10;
 

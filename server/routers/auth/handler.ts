@@ -44,8 +44,10 @@ export const login = async (
 
   // Generate Token
   const { password: _, ...safeUser } = user;
-  const token = generateAccessToken({ ...safeUser, validTime: 0 });
-
+  const token = generateAccessToken({
+    ...safeUser,
+    validTime: 0,
+  });
   return res.status(200).json({
     token,
     ...safeUser,

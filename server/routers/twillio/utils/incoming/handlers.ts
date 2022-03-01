@@ -34,6 +34,7 @@ export const handleIncomingCall = async (
     },
     include: {
       settings: true,
+      users: true,
     },
   });
   if (!phoneNumber) {

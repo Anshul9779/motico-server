@@ -19,6 +19,9 @@ import jwt from "jsonwebtoken";
 import { NEW_USER_PASSWORD, ROLES } from "./../constants";
 import PhoneNumber from "../models/PhoneNumber";
 import TeamModel from "../models/Team";
+import { AuthenticatedTypedRequest } from "../types";
+import { Prisma } from "@prisma/client";
+import prisma from "../prisma";
 
 const SECRET_TOKEN = "randomstring_KLNL kn lk091830 knl";
 
@@ -30,43 +33,67 @@ const sendMailInvite = async (newUser: UserDocument) => {
   throw new Error("Invite not implemented");
 };
 
-export const userInvite = async (req: AuthenticatedRequest, res: Response) => {
-  const payload = req.body;
-  console.log(payload);
-  payload.password = NEW_USER_PASSWORD;
+export const userInvite = async (
+  req: AuthenticatedTypedRequest<
+    Omit<Prisma.UserCreateInput, "phoneNumbers" | "team"> & {
+      phoneNumbers: number[];
+      team: number;
+    }
+  >,
+  res: Response
+) => {
+  const { firstName, email, lastName, phoneNumbers, team } = req.body;
+  const { companyId } = req.user;
   // Handle the error here
-  if (!payload.firstName || !payload.email || !payload.phoneNumberId) {
+  if (!firstName || !email) {
     return res.status(400).json(INCOMPLETE_DATA);
   }
   try {
-    const hashedPassword = await generateHashedPassword(payload.password);
-
-    const createdUser = await UserModel.create({
-      firstName: payload.firstName,
-      lastName: payload.lastName,
-      email: payload.email,
-      password: hashedPassword,
-      roles: [ROLES.NEW_USER, ROLES.PASSWORD_RESET],
-      phoneNumbers: payload.phoneNumberId,
-      company: req.user.companyId,
-      isOnline: false,
+    const password = await generateHashedPassword(NEW_USER_PASSWORD);
+    const sameEmail = await prisma.user.findUnique({
+      where: { email },
     });
-    // Assign phone number to that user
-    await PhoneNumber.findByIdAndUpdate(payload.phoneNumberId, {
-      $push: { assignedTo: createdUser._id },
-    }).exec();
-    await TeamModel.findByIdAndUpdate(payload.teamId, {
-      $push: { users: createdUser._id },
-    }).exec();
+
+    if (sameEmail) {
+      throw new Error("duplicate-email");
+    }
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        firstName,
+        lastName,
+        password,
+        roles: [ROLES.NEW_USER, ROLES.PASSWORD_RESET, ROLES.USER],
+        company: {
+          connect: {
+            id: companyId,
+          },
+        },
+        phoneNumbers: {
+          connect: phoneNumbers?.map((id) => ({ id })),
+        },
+        settings: {
+          create: {
+            showDialler: false,
+          },
+        },
+        team: {
+          connect: {
+            id: team,
+          },
+        },
+      },
+    });
+
+    const { password: _, ...safeUser } = user;
+
     // TODO: Implement this function
     // await sendMailInvite(createdUser);
-    res.sendStatus(200).send("OK");
+    return res.status(201).json(safeUser);
   } catch (error) {
     console.error(error);
-    if (
-      error.code === 11000 ||
-      error.message.includes("duplicate key error collection")
-    ) {
+    if (error.message.includes("duplicate-email")) {
       return res.status(400).json(DUPLICATE_EMAIL);
     } else {
       return res.status(500).json(INTERNAL_SERVER_ERROR);

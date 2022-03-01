@@ -12,9 +12,11 @@ const ObjectId = Types.ObjectId;
 
 import UserModel from "./../models/User";
 import { AuthenticatedRequest } from "./auth";
-import Company from "./../models/Company";
 import TeamModel from "./../models/Team";
 import PhoneNumber from "./../models/PhoneNumber";
+import { AuthenticatedTypedRequest } from "../types";
+import prisma from "../prisma";
+import { Company, User, UserSettings } from "@prisma/client";
 
 /**
  * Online Users Details
@@ -116,23 +118,18 @@ export const userAddRoles = async (
 };
 
 export const createCompnay = async (
-  req: AuthenticatedRequest,
+  req: AuthenticatedTypedRequest<{ name: string; email: string }>,
   res: Response
 ) => {
   try {
-    if (!req.body.name || !req.body.email) {
-      return res.status(400).json(INCOMPLETE_DATA);
-    }
     const { name, email } = req.body;
-    const company = await Company.create({
-      name,
-      email,
+    const company = await prisma.company.create({
+      data: {
+        name,
+        details: email,
+      },
     });
-    res.status(201).json({
-      id: company._id,
-      name: company.name,
-      email: company.email,
-    });
+    res.status(201).json(company);
   } catch (error) {
     console.error(error);
     res.status(500).json(INTERNAL_SERVER_ERROR);
@@ -160,19 +157,28 @@ export const addUserToTeam = async (
 };
 
 export const getUsersByCompany = async (
-  req: AuthenticatedRequest,
+  req: AuthenticatedTypedRequest,
   res: Response
 ) => {
   try {
-    const companyId = req.user.companyId;
-    const users = await UserModel.find({ company: companyId }).exec();
-    const data = users.map((u) => {
+    const { companyId } = req.user;
+    const companyUser = await prisma.user.findMany({
+      where: {
+        companyId,
+      },
+      include: {
+        phoneNumbers: true,
+        team: true,
+      },
+    });
+    const data = companyUser.map((u) => {
       return {
-        id: u._id,
+        id: u.id,
         firstName: u.firstName,
         lastName: u.lastName,
         email: u.email,
         phoneNumbers: u.phoneNumbers,
+        team: u.team,
       };
     });
     return res.json(data);
@@ -206,87 +212,74 @@ export const getUserDetails = async (
   }
 };
 
-export const deleteUser = async (req: AuthenticatedRequest, res: Response) => {
+export const deleteUser = async (
+  req: AuthenticatedTypedRequest<{ id: number }>,
+  res: Response
+) => {
   try {
-    const userId = req.body.userId;
-    if (!userId) {
+    const { id } = req.body;
+    if (!id) {
       return res.json(INCOMPLETE_DATA);
     }
-    // First remove from Teams
-    const teams = await TeamModel.find({
-      users: userId,
-    }).exec();
-    await Promise.all(
-      teams.map(async (team) => {
-        team.users = team.users.filter((id) => id !== userId);
-        return await team.save();
-      })
-    );
 
-    // Remove from PhoneNumbers
-    const phoneNumbers = await PhoneNumber.find({
-      assignedTo: userId,
+    await prisma.user.delete({
+      where: {
+        id,
+      },
     });
-
-    await Promise.all(
-      phoneNumbers.map(async (phoneNumber) => {
-        phoneNumber.assignedTo = phoneNumber.assignedTo.filter(
-          (id) => id !== userId
-        );
-        return await phoneNumber.save();
-      })
-    );
-
-    // Now Delete the user
-
-    await UserModel.findByIdAndDelete(userId).exec();
-
-    return res.json({
-      message: "OK",
-    });
+    return res.json({ message: "Deleted" });
   } catch (error) {
     console.error(error);
     return res.json(INTERNAL_SERVER_ERROR);
   }
 };
 
-export const getMe = async (req: AuthenticatedRequest, res: Response) => {
-  const tokenUser = req.user;
+export const getMe = async (req: AuthenticatedTypedRequest, res: Response) => {
+  const { id } = req.user;
 
-  const user = await UserModel.findById(tokenUser.id)
-    .populate("company")
-    .exec();
-
-  return res.json({
-    id: user._id,
-    company: user.company,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    phoneNumber: user.phoneNumber,
-    email: user.email,
-    reciveUpdates: user.reciveUpdates ?? false,
-    missedCallAlert: user.missedCallAlert ?? false,
-    voicemailAlert: user.voicemailAlert ?? false,
-    dashboard: user.dashboard ?? false,
-    dialler: user.dialler ?? false,
+  const user = await prisma.user.findUnique({
+    where: {
+      id,
+    },
+    include: {
+      settings: true,
+      company: true,
+    },
   });
+
+  const { password, ...safeUser } = user;
+
+  return res.json(safeUser);
 };
 
-export const setMe = async (req: AuthenticatedRequest, res: Response) => {
-  const tokenUser = req.user;
-  const body = req.body;
-  const user = await UserModel.findByIdAndUpdate(tokenUser.id, { ...body });
-  return res.json({
-    id: user._id,
-    company: user.company,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    phoneNumber: user.phoneNumber,
-    email: user.email,
-    reciveUpdates: user.reciveUpdates ?? false,
-    missedCallAlert: user.missedCallAlert ?? false,
-    voicemailAlert: user.voicemailAlert ?? false,
-    dashboard: user.dashboard ?? false,
-    dialler: user.dialer ?? false,
+export const setMe = async (
+  req: AuthenticatedTypedRequest<
+    Partial<User & { settings: UserSettings; company: Company }>
+  >,
+  res: Response
+) => {
+  const { id } = req.user;
+
+  const { settings, company, ...user } = req.body;
+
+  const newUser = await prisma.user.update({
+    where: {
+      id,
+    },
+    data: user,
+    include: {
+      settings: true,
+      company: true,
+    },
   });
+  const newSettings = await prisma.userSettings.update({
+    where: {
+      id: settings.id,
+    },
+    data: settings,
+  });
+
+  const { password, ...safeUser } = newUser;
+
+  return res.json({ ...safeUser, settings });
 };

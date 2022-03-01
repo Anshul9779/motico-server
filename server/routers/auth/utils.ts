@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import { SafeUser } from "../../types";
 import jwt from "jsonwebtoken";
 
-const SECRET_TOKEN =
+export const SECRET_TOKEN =
   process.env.SECRET_TOKEN || "randomstring_KLNL kn lk091830 knl";
 
 const SALT_ROUNDS = 10;

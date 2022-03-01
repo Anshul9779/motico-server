@@ -137,7 +137,7 @@ app.get("/api/admin/user/online", isAdmin, onlineUsers);
 app.post("/api/admin/user/delete", isAdmin, deleteUser);
 app.post("/api/admin/user/company", isAdmin, userAddCompany);
 app.post("/api/admin/user/roles", isAdmin, userAddRoles);
-app.post("/api/admin/user/get-company", isAdmin, getUsersByCompany);
+app.get("/api/admin/user/get-company", isAdmin, getUsersByCompany);
 app.post("/api/admin/user", getUserDetails);
 app.post("/api/admin/company/new", isAdmin, createCompnay);
 
