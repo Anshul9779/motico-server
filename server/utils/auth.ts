@@ -31,7 +31,7 @@ export const authenticateToken = (
   jwt.verify(token, SECRET_TOKEN, (err, user: SafeUser) => {
     if (err) {
       console.error(err);
-      res.status(401).json(TOKEN_ERROR);
+      return res.status(401).json(TOKEN_ERROR);
     }
     req.user = user;
     next();

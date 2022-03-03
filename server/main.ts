@@ -15,6 +15,7 @@ import twillioRouter from "./routers/twillio";
 import { userInvite } from "./routes/auth";
 import path from "path";
 import {
+  assignNumberToUser,
   createCompnay,
   deleteUser,
   getMe,
@@ -138,7 +139,8 @@ app.post("/api/admin/user/delete", isAdmin, deleteUser);
 app.post("/api/admin/user/company", isAdmin, userAddCompany);
 app.post("/api/admin/user/roles", isAdmin, userAddRoles);
 app.get("/api/admin/user/get-company", isAdmin, getUsersByCompany);
-app.post("/api/admin/user", getUserDetails);
+app.post("/api/admin/user/:id/assign", assignNumberToUser);
+app.get("/api/admin/user/:id", getUserDetails);
 app.post("/api/admin/company/new", isAdmin, createCompnay);
 
 /**

@@ -184,31 +184,56 @@ export const getUsersByCompany = async (
     return res.json(data);
   } catch (error) {
     console.error(error);
-    return res.json(INTERNAL_SERVER_ERROR);
+    return res.status(500).json(INTERNAL_SERVER_ERROR);
   }
 };
 
 export const getUserDetails = async (
-  req: AuthenticatedRequest,
+  req: AuthenticatedTypedRequest<{}, {}, { id: string }>,
   res: Response
 ) => {
   try {
-    const userId = req.body.userId;
-    const user = await UserModel.findById(userId)
-      .populate("phoneNumbers")
-      .exec();
-    return res.json({
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      phoneNumbers: user.phoneNumbers,
-      roles: user.roles,
-      company: user.comany,
-      id: user._id,
+    const id = parseInt(req.params.id, 10);
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        phoneNumbers: true,
+        settings: true,
+        team: true,
+      },
     });
+
+    return res.json(user);
   } catch (error) {
     console.error(error);
-    return res.json(INTERNAL_SERVER_ERROR);
+    return res.status(500).json(INTERNAL_SERVER_ERROR);
+  }
+};
+
+export const assignNumberToUser = async (
+  req: AuthenticatedTypedRequest<{ ids: number[] }, {}, { id: string }>,
+  res: Response
+) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const { ids } = req.body;
+
+    await prisma.user.update({
+      where: {
+        id,
+      },
+      data: {
+        phoneNumbers: {
+          set: ids.map((id) => ({ id })),
+        },
+      },
+    });
+
+    return res.send("OK");
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(INTERNAL_SERVER_ERROR);
   }
 };
 

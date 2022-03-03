@@ -2,14 +2,8 @@ import { INCOMPLETE_DATA, INTERNAL_SERVER_ERROR } from "./../../errors";
 import { Response } from "express";
 import logger from "../../logger";
 import { AuthenticatedTypedRequest } from "../../types";
-import {
-  AssignPhoneNumberFnPN,
-  AssignPhoneNumberFnTeam,
-  AssignPhoneNumberFnUser,
-  assignPhonenumberGeneric,
-} from "../../utils/phonenumber";
 import prisma from "../../prisma";
-import { Prisma } from "@prisma/client";
+import { PhoneNumber, PhoneNumberSettings, Prisma, User } from "@prisma/client";
 
 export const getCompanyPhoneNumbers = async (
   req: AuthenticatedTypedRequest,
@@ -75,27 +69,68 @@ export const addNumber = async (
   }
 };
 
+type UsersAssign = {
+  type: "users";
+  ids: number[];
+};
+
+type TeamAssign = {
+  type: "team";
+  id: number;
+};
+
 export const assignPhoneNumber = async (
-  req: AuthenticatedTypedRequest<
-    AssignPhoneNumberFnUser | AssignPhoneNumberFnTeam | AssignPhoneNumberFnPN,
-    undefined
-  >,
+  req: AuthenticatedTypedRequest<UsersAssign | TeamAssign, {}, { id: string }>,
   res: Response
 ) => {
-  return res.json({
-    message: "API NOT IMPLEMENTED",
-  });
   try {
-    if (!req.body.type) {
-      return res.json({
-        ...INCOMPLETE_DATA,
-        message: "You are using old API, update",
+    const data = req.body;
+    const id = parseInt(req.params.id, 10);
+
+    const { type } = data;
+
+    if (data.type === "users") {
+      const { ids } = data;
+
+      await prisma.phoneNumber.update({
+        where: {
+          id,
+        },
+        data: {
+          team: {
+            disconnect: true,
+          },
+          users: {
+            set: ids.map((i) => ({
+              id: i,
+            })),
+          },
+        },
       });
+      return res.send("OK");
     }
-    await assignPhonenumberGeneric(req.body);
-    return res.json({
-      message: "OK",
-    });
+    if (data.type === "team") {
+      const teamId = data.id;
+
+      await prisma.phoneNumber.update({
+        where: {
+          id,
+        },
+        data: {
+          users: {
+            set: [],
+          },
+          team: {
+            connect: {
+              id: teamId,
+            },
+          },
+        },
+      });
+      return res.send("OK");
+    }
+
+    return res.status(400).send("Incorrect type");
   } catch (error) {
     console.error(error);
     return res.json(INTERNAL_SERVER_ERROR);
@@ -119,11 +154,7 @@ export const getNumberSettings = async (
 };
 
 export const updateNumberSetting = async (
-  req: AuthenticatedTypedRequest<
-    Prisma.PhoneNumberSettingsUpdateInput,
-    {},
-    { id: string }
-  >,
+  req: AuthenticatedTypedRequest<PhoneNumberSettings, {}, { id: string }>,
   res: Response
 ) => {
   try {
@@ -134,7 +165,27 @@ export const updateNumberSetting = async (
         phoneNumberId: id,
       },
       data: req.body,
+      include: {
+        phoneNumber: true,
+      },
     });
+
+    if (updatedSettings.ivrEnabled) {
+      // If IVR Enabled, disconnect team and users
+      await prisma.phoneNumber.update({
+        where: {
+          id,
+        },
+        data: {
+          users: {
+            set: [],
+          },
+          team: {
+            disconnect: true,
+          },
+        },
+      });
+    }
 
     return res.json(updatedSettings);
   } catch (e) {
@@ -145,4 +196,24 @@ export const updateNumberSetting = async (
     });
     return res.status(500);
   }
+};
+
+export const getPhonenumber = async (
+  req: AuthenticatedTypedRequest<{}, {}, { id: string }>,
+  res: Response
+) => {
+  const id = parseInt(req.params.id, 10);
+  const data = await prisma.phoneNumber.findUnique({
+    where: { id },
+    include: {
+      settings: true,
+      users: true,
+      team: true,
+    },
+  });
+  const safeData = {
+    ...data,
+    users: data.users.map(({ password, ...user }) => user),
+  };
+  return res.json(safeData);
 };

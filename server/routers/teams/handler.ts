@@ -81,6 +81,7 @@ export const getTeams = async (
     },
     include: {
       users: true,
+      phoneNumber: true,
     },
   });
 
