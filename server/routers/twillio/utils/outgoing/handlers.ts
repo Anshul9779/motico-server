@@ -90,7 +90,7 @@ export const outgoingStart = async (
     to: string;
     from: string;
     isAdmin: "true" | "false";
-    callRecordID: number;
+    callRecordID: string;
     isIncoming: "true" | "false";
     CallSid: string;
   }>,
@@ -104,9 +104,12 @@ export const outgoingStart = async (
     isIncoming,
     CallSid,
   } = req.body;
+
+  const id = parseInt(callRecordID, 10);
+
   // Here check if the ID is correct or not
   const call = await prisma.call.findUnique({
-    where: { id: callRecordID },
+    where: { id },
   });
 
   if (!call) {
@@ -115,7 +118,7 @@ export const outgoingStart = async (
   if (isAdmin === "false" || !call.startedOn) {
     // If ID is correct then mutate the data
     await prisma.call.update({
-      where: { id: callRecordID },
+      where: { id },
       data: {
         startedOn: new Date(),
         sid: CallSid,

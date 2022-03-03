@@ -8,6 +8,8 @@ import {
 } from "./../../errors";
 import { awsKeyExists } from "../../routers/aws/utils";
 import logger from "../../logger";
+import prisma from "../../prisma";
+import { AuthenticatedTypedRequest } from "../../types";
 
 export const callDuration = async (
   req: AuthenticatedRequest,
@@ -304,28 +306,29 @@ export const getCallRecordFromId = async (
 };
 
 export const getCallRecordings = async (
-  req: AuthenticatedRequest,
+  req: AuthenticatedTypedRequest,
   res: Response
 ) => {
   const companyId = req.user.companyId;
 
-  const callRecords = await CallRecordModel.find({
-    company: companyId,
-    startTime: {
-      $gte: 0,
+  const calls = await prisma.call.findMany({
+    where: {
+      companyId,
+      status: "ENDED",
     },
-    endTime: {
-      $gte: 0,
+    orderBy: {
+      startedOn: "desc",
     },
-  })
-    .sort([["startTime", -1]])
-    .limit(15)
-    .populate("user")
-    .exec();
+    take: 15,
+    include: {
+      user: true,
+      from: true,
+    },
+  });
 
   const data = await Promise.all(
-    callRecords.map(async (callRecord) => {
-      const recordingPath = `${companyId}/recordings/${callRecord._id}.ogg`;
+    calls.map(async ({ id, from, to, endedOn, startedOn, user, type }) => {
+      const recordingPath = `${companyId}/recordings/${id}.ogg`;
       let exists = false;
       try {
         exists = await awsKeyExists(recordingPath);
@@ -338,17 +341,16 @@ export const getCallRecordings = async (
       }
 
       return {
-        id: callRecord._id,
-        from: callRecord.from,
-        to: callRecord.to,
-        duration:
-          callRecord.duration || callRecord.endTime - callRecord.startTime,
+        id,
+        from: from.number,
+        to: to,
+        duration: endedOn.getTime() - startedOn.getTime(),
         user: {
-          id: callRecord.user._id,
-          name: callRecord.user.firstName,
+          id: user.id,
+          name: user.firstName,
         },
-        startTime: callRecord.startTime,
-        type: callRecord.type,
+        startTime: startedOn.getTime(),
+        type,
         recordingURL: exists ? recordingPath : null,
       };
     })
