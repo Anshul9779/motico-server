@@ -12,6 +12,7 @@ import phonenumberRouter from "./routers/phonenumber";
 import teamsRouter from "./routers/teams";
 import callRouter from "./routers/call";
 import twillioRouter from "./routers/twillio";
+import reportsRouter from "./routers/report";
 import { userInvite } from "./routes/auth";
 import path from "path";
 import {
@@ -168,6 +169,7 @@ app.use("/api/aws", awsRouter);
 app.use("/api/phonenumber", phonenumberRouter);
 app.use("/api/teams", teamsRouter);
 app.use("/api/twillio", twillioRouter);
+app.use("/api/reports", reportsRouter);
 
 app.get("/api/migrations", (req, res) => {
   migrations()
