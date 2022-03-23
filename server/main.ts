@@ -87,11 +87,13 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use("/static", express.static(path.join(__dirname, "build", "static")));
 
 app.use("/api", (req: Request, res: Response, next: NextFunction) => {
-  logger.verbose({
-    timestamp: new Date().toISOString(),
-    url: `[${req.method.toUpperCase()}] ${req.originalUrl}`,
-    body: req.body,
-  });
+  if (req.body !== "/api/status") {
+    logger.verbose({
+      timestamp: new Date().toISOString(),
+      url: `[${req.method.toUpperCase()}] ${req.originalUrl}`,
+      body: req.body,
+    });
+  }
   try {
     next();
   } catch (error) {

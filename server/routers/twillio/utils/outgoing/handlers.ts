@@ -75,7 +75,7 @@ export const confConnect = async (
         earlyMedia: true,
         endConferenceOnExit: true,
       })
-      .then(() => {
+      .then((d) => {
         res.status(200).end();
       })
       .catch((error: Error) => {

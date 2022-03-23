@@ -1,9 +1,23 @@
 import VoiceResponse from "twilio/lib/twiml/VoiceResponse";
-import { forwardCallTo } from "./department";
+import { forwardCallToTeam } from "./department";
 import { terminateCall } from "./utils";
 import logger from "../../../../logger";
 import { PhoneNumberSettings } from "@prisma/client";
 import prisma from "../../../../prisma";
+import twilio from "twilio";
+import config from "../../../../config";
+const client = twilio(config.accountSid, config.authToken);
+
+type IVRSetting = {
+  id: number;
+  label: string;
+};
+
+type IVRData = {
+  type: "TEXT" | "AUDIO";
+  message: string;
+  data: IVRSetting[];
+};
 
 /**
  *
@@ -55,13 +69,23 @@ export const ivrStep1 = (callId: number, setting: PhoneNumberSettings) => {
 
   // Check the ivr data and do accordingly
   if (setting.ivrEnabled && setting.ivrData) {
-    const parsedData = setting.ivrData as {
-      phoneNumberId: string;
-      label: string;
-    }[];
+    const parsedData = setting.ivrData as IVRData;
 
-    parsedData.forEach((ivr, index) => {
-      gather.say(`Press ${index + 1} to connect to ${ivr.label}`);
+    if (parsedData.type === "TEXT") {
+      gather.say(parsedData.message);
+      gather.pause({
+        length: 0.2,
+      });
+    } else {
+      gather.play(`https://api.twilio.com/cowbell.mp3`);
+      gather.pause({
+        length: 0.2,
+      });
+    }
+
+    const { data } = parsedData;
+    data.forEach(({ label }, index) => {
+      gather.say(`Press ${index + 1} to connect to ${label}`);
       gather.pause({
         length: 0.5,
       });
@@ -86,12 +110,13 @@ export const ivrStep2 = async (callId: string, digit: string | number) => {
       },
     },
   });
-  const parsedData = settings.ivrData as {
-    phoneNumberId: string;
-    label: string;
-  }[];
+  const parsedData = settings.ivrData as IVRData;
   const numberDigit = Number(digit);
-  return parsedData[numberDigit]
-    ? forwardCallTo(parsedData[numberDigit].phoneNumberId)
-    : terminateCall();
+  const { data } = parsedData;
+
+  if (data[numberDigit]) {
+    // TODO:  remove current phoenumber from conf
+    return await forwardCallToTeam(data[numberDigit].id, callId);
+  }
+  return terminateCall(callId);
 };

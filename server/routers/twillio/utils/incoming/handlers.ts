@@ -94,10 +94,10 @@ export const handleIncomingCall = async (
     logger.log("info", {
       timestamp: new Date().toISOString(),
       function: "routers.twillio.utils.incoming.handlers.handleIncomingCall",
-      message: "Transferring to grerting",
+      message: "Transferring to greeting",
     });
     if (settings.greetingMsgStatus === "TEXT") {
-      twiml.say(settings.greetingMsgStatus);
+      twiml.say(settings.greetingMsgText);
     } else {
       twiml.play(`https://api.twilio.com/cowbell.mp3`);
     }
