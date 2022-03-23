@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from "./auth";
 import VoiceResponse from "twilio/lib/twiml/VoiceResponse";
 import CallRecordModel from "./../models/CallRecord";
 import { terminateCall } from "./../routers/twillio/utils/incoming/utils";
+import { NOT_IMPLEMENTED } from "../errors";
 /**
  * Twillio Call Connect
  *
@@ -29,6 +30,7 @@ export const ivrWelcome = async (req: Request, res: Response) => {
 
 export const ivrMenu = async (req: Request, res: Response) => {
   console.log(req.body);
+  return res.status(503).send(NOT_IMPLEMENTED);
   const digit = req.body.digits || req.body.Digits;
   if (digit === "1") {
     const twiml = new VoiceResponse();
@@ -43,7 +45,8 @@ export const ivrMenu = async (req: Request, res: Response) => {
       "Thank you for calling Motico Solutioncs. We are now hanging up!"
     );
     return res.send(twiml.toString());
-  } else res.send(terminateCall());
+    // } else res.send(terminateCall());
+  }
 };
 
 // Handle Incoming Call->

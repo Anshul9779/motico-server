@@ -37,3 +37,8 @@ export const DATA_INCORRECT = {
   err: "DATA_INCORRECT",
   message: "Data supplied to resource is incorrect. Please check and try again",
 } as const;
+
+export const NOT_IMPLEMENTED = {
+  err: "NOT_IMPLEMENTED",
+  message: "API route is not implemented",
+};
