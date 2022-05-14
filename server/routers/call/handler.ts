@@ -11,89 +11,91 @@ import logger from "../../logger";
 import prisma from "../../prisma";
 import { AuthenticatedTypedRequest } from "../../types";
 
+const getTalktime = async (gteDate: Date, companyId: number) => {
+  return (
+    await prisma.call.findMany({
+      where: {
+        companyId,
+        startedOn: {
+          gte: gteDate,
+        },
+      },
+      select: {
+        startedOn: true,
+        endedOn: true,
+      },
+    })
+  ).reduce((acc, curr) => {
+    if (curr.endedOn)
+      return curr.endedOn.getTime() - curr.startedOn.getTime() + acc;
+    return acc;
+  }, 0);
+};
+
 export const callDuration = async (
   req: AuthenticatedRequest,
   res: Response
 ) => {
-  const inbound = await CallRecordModel.find({
-    company: req.user.companyId,
-    type: "INCOMING",
-    duration: {
-      $gt: 0,
-    },
-  }).exec();
   const inboundDuration =
-    inbound.reduce((prev, curr) => prev + curr.duration, 0) / (1000 * 60); // Total in minutes
-  const outgoing = await CallRecordModel.find({
-    company: req.user.companyId,
-    type: "OUTGOING",
-    duration: {
-      $gt: 0,
-    },
-  }).exec();
+    (
+      await prisma.call.findMany({
+        where: {
+          userId: req.user.id,
+          type: "INCOMING",
+        },
+        select: {
+          startedOn: true,
+          endedOn: true,
+        },
+      })
+    ).reduce((acc, curr) => {
+      if (curr.endedOn)
+        return curr.endedOn.getTime() - curr.startedOn.getTime() + acc;
+      return acc;
+    }, 0) /
+    (1000 * 60); // Total in minutes;
   const outgoingDuration =
-    outgoing.reduce((prev, curr) => prev + curr.duration, 0) / (1000 * 60); // Total in minutes
+    (
+      await prisma.call.findMany({
+        where: {
+          userId: req.user.id,
+          type: "OUTGOING",
+        },
+        select: {
+          startedOn: true,
+          endedOn: true,
+        },
+      })
+    ).reduce((acc, curr) => {
+      if (curr.endedOn)
+        return curr.endedOn.getTime() - curr.startedOn.getTime() + acc;
+      return acc;
+    }, 0) /
+    (1000 * 60); // Total in minutes;
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
   const date = new Date(currentYear, 0, 1);
-  const yearTalkTime = (
-    await CallRecordModel.find({
-      company: req.user.companyId,
-      duration: {
-        $gt: 0,
-      },
-      startTime: {
-        $gte: date.getTime(),
-      },
-    }).exec()
-  ).reduce((prev, curr) => prev + curr.duration, 0);
+
+  const companyId = parseInt(req.user.companyId);
+  const yearTalkTime = await getTalktime(date, companyId);
   const weekDay = new Date().getDay();
+
   const startWeekDate = new Date().getDay() - weekDay;
-  const monthTalktime = (
-    await CallRecordModel.find({
-      company: req.user.companyId,
-      duration: {
-        $gt: 0,
-      },
-      startTime: {
-        $gte: new Date(currentYear, currentMonth, 1).getTime(),
-      },
-    }).exec()
-  ).reduce((prev, curr) => {
-    return prev + curr.duration;
-  }, 0);
 
-  const weekTalktime = (
-    await CallRecordModel.find({
-      company: req.user.companyId,
-      duration: {
-        $gt: 0,
-      },
-      startTime: {
-        $gte: new Date(currentYear, currentMonth, startWeekDate).getTime(),
-      },
-    }).exec()
-  ).reduce((prev, curr) => {
-    return prev + curr.duration;
-  }, 0);
+  const monthTalktime = await getTalktime(
+    new Date(currentYear, currentMonth, 1),
+    companyId
+  );
 
-  const todayTalkTime = (
-    await CallRecordModel.find({
-      company: req.user.companyId,
-      duration: {
-        $gt: 0,
-      },
-      startTime: {
-        $gte: new Date(
-          currentYear,
-          currentMonth,
-          new Date().getDate()
-        ).getTime(),
-      },
-    }).exec()
-  ).reduce((prev, curr) => {
-    return prev + curr.duration;
-  }, 0);
+  const weekTalktime = await getTalktime(
+    new Date(currentYear, currentMonth, startWeekDate),
+    companyId
+  );
+
+  const todayTalkTime = await getTalktime(
+    new Date(currentYear, currentMonth, new Date().getDate()),
+    companyId
+  );
 
   return res.json({
     inboundDuration,
@@ -111,76 +113,91 @@ export const totalCalls = async (req: AuthenticatedRequest, res: Response) => {
   const date = new Date();
   const startTime = date.setHours(0, 0, 0, 0);
   try {
-    const inbound = await CallRecordModel.find({
-      user: req.user.id,
-      type: "INCOMING",
-      duration: {
-        $gt: 0,
-      },
-      startTime: {
-        $gte: startTime,
-        $lte: endTime,
-      },
-    })
-      .count()
-      .exec();
-    const inboundTime = (
-      await CallRecordModel.find({
-        user: req.user.id,
+    const inbound = await prisma.call.count({
+      where: {
+        userId: req.user.id,
         type: "INCOMING",
-        duration: {
-          $gt: 0,
+        startedOn: {
+          gte: new Date(startTime),
+          lte: new Date(endTime),
         },
-        startTime: {
-          $gte: startTime,
-          $lte: endTime,
+      },
+    });
+
+    const inboundTime = (
+      await prisma.call.findMany({
+        where: {
+          userId: req.user.id,
+          type: "INCOMING",
+          startedOn: {
+            gte: new Date(startTime),
+            lte: new Date(endTime),
+          },
         },
-      }).exec()
-    ).reduce((acc, curr) => acc + curr.duration, 0);
-    const outgoing = await CallRecordModel.find({
-      user: req.user.id,
-      type: "OUTGOING",
-      duration: {
-        $gt: 0,
-      },
-      startTime: {
-        $gte: startTime,
-        $lte: endTime,
-      },
-    })
-      .count()
-      .exec();
-    const outgoingTime = (
-      await CallRecordModel.find({
-        user: req.user.id,
+        select: {
+          startedOn: true,
+          endedOn: true,
+        },
+      })
+    ).reduce((acc, curr) => {
+      if (curr.endedOn)
+        return curr.endedOn.getTime() - curr.startedOn.getTime() + acc;
+      return acc;
+    }, 0);
+
+    const outgoing = await prisma.call.count({
+      where: {
+        userId: req.user.id,
         type: "OUTGOING",
-        duration: {
-          $gt: 0,
+        startedOn: {
+          gte: new Date(startTime),
+          lte: new Date(endTime),
         },
-        startTime: {
-          $gte: startTime,
-          $lte: endTime,
+      },
+    });
+
+    const outgoingTime = (
+      await prisma.call.findMany({
+        where: {
+          userId: req.user.id,
+          type: "OUTGOING",
+          startedOn: {
+            gte: new Date(startTime),
+            lte: new Date(endTime),
+          },
         },
-      }).exec()
-    ).reduce((acc, curr) => acc + curr.duration, 0);
-    const missed = await CallRecordModel.find({
-      user: req.user.id,
-      type: "MISSED",
-      startTime: {
-        $gte: startTime,
-        $lte: endTime,
+        select: {
+          startedOn: true,
+          endedOn: true,
+        },
+      })
+    ).reduce((acc, curr) => {
+      if (curr.endedOn)
+        return curr.endedOn.getTime() - curr.startedOn.getTime() + acc;
+      return acc;
+    }, 0);
+
+    const missed = await prisma.call.count({
+      where: {
+        userId: req.user.id,
+        type: "MISSED",
+        startedOn: {
+          gte: new Date(startTime),
+          lte: new Date(endTime),
+        },
       },
-    })
-      .count()
-      .exec();
-    const total = await CallRecordModel.find({
-      user: req.user.id,
-      duration: {
-        $gt: 0,
+    });
+
+    const total = await prisma.call.count({
+      where: {
+        userId: req.user.id,
+        startedOn: {
+          gte: new Date(startTime),
+          lte: new Date(endTime),
+        },
       },
-    })
-      .count()
-      .exec();
+    });
+
     const data = {
       inbound,
       outgoing,
@@ -206,42 +223,36 @@ export const callRecordTime = async (
     if (endTime < startTime) {
       res.status(400).json(DATA_INCORRECT);
     }
-    const inbound = await CallRecordModel.find({
-      user: req.user.id,
-      type: "INCOMING",
-      duration: {
-        $gt: 0,
+    const inbound = await prisma.call.count({
+      where: {
+        userId: req.user.id,
+        type: "INCOMING",
+        startedOn: {
+          gte: new Date(startTime),
+          lte: new Date(endTime),
+        },
       },
-      startTime: {
-        $gte: startTime,
-        $lte: endTime,
+    });
+    const outgoing = await prisma.call.count({
+      where: {
+        userId: req.user.id,
+        type: "OUTGOING",
+        startedOn: {
+          gte: new Date(startTime),
+          lte: new Date(endTime),
+        },
       },
-    })
-      .count()
-      .exec();
-    const outgoing = await CallRecordModel.find({
-      user: req.user.id,
-      type: "OUTGOING",
-      duration: {
-        $gt: 0,
+    });
+    const missed = await prisma.call.count({
+      where: {
+        userId: req.user.id,
+        type: "MISSED",
+        startedOn: {
+          gte: new Date(startTime),
+          lte: new Date(endTime),
+        },
       },
-      startTime: {
-        $gte: startTime,
-        $lte: endTime,
-      },
-    })
-      .count()
-      .exec();
-    const missed = await CallRecordModel.find({
-      user: req.user.id,
-      type: "MISSED",
-      startTime: {
-        $gte: startTime,
-        $lte: endTime,
-      },
-    })
-      .count()
-      .exec();
+    });
     const data = {
       inbound,
       outgoing,
